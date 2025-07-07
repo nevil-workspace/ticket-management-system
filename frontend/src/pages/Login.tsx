@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import toast from '@/lib/toast';
 import { useForm } from '@/hooks/useForm';
+import { GoogleLogin } from '@react-oauth/google';
 
 interface LoginFormData {
   email: string;
@@ -35,6 +36,23 @@ export function Login() {
       <div className="space-y-2 text-center">
         <h1 className="text-3xl font-bold">Login</h1>
         <p className="text-gray-500">Enter your credentials to access your account</p>
+      </div>
+      <div className="flex flex-col items-center space-y-4">
+        <GoogleLogin
+          onSuccess={async (credentialResponse) => {
+            if (credentialResponse.credential) {
+              try {
+                await login(undefined, undefined, credentialResponse.credential);
+                toast.success('Login successful');
+                navigate('/boards');
+              } catch (e) {
+                toast.error('Google login failed');
+              }
+            }
+          }}
+          onError={() => toast.error('Google login failed')}
+        />
+        <span className="text-gray-400 text-xs">or</span>
       </div>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">

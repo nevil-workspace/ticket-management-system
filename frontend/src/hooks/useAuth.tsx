@@ -9,7 +9,7 @@ interface User {
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email?: string, password?: string, credential?: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
   loading: boolean;
@@ -39,9 +39,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     initializeAuth();
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const login = async (email?: string, password?: string, credential?: string) => {
     try {
-      const response = await authAPI.login({ email, password });
+      let response;
+      if (credential) {
+        response = await authAPI.googleAuth({ credential });
+      } else if (email && password) {
+        response = await authAPI.login({ email, password });
+      } else {
+        throw new Error('Missing credentials');
+      }
       const { token, user } = response;
       localStorage.setItem('token', token);
       setUser(user);

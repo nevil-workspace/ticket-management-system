@@ -106,7 +106,7 @@ export const authAPI = {
 
   getCurrentUser: () => apiService.get<any>('/auth/me'),
 
-  googleAuth: (data: { googleId: string; email: string; name: string; profileImage?: string }) =>
+  googleAuth: (data: { credential: string }) =>
     apiService.post<{ token: string; user: any }>('/auth/google', data),
 };
 

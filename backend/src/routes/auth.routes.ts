@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { register, login, getCurrentUser } from '../controllers/auth.controller';
+import { register, login, getCurrentUser, googleLogin } from '../controllers/auth.controller';
 import { authenticateToken } from '../middleware/auth';
 import { body } from 'express-validator';
 
@@ -27,5 +27,7 @@ router.post(
 );
 
 router.get('/me', authenticateToken, getCurrentUser);
+
+router.post('/google', googleLogin);
 
 export default router;

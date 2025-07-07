@@ -2,6 +2,9 @@ import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../index';
 import bcrypt from 'bcryptjs';
+import { OAuth2Client } from 'google-auth-library';
+
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -102,5 +105,58 @@ export const getCurrentUser = async (req: Request, res: Response): Promise<void>
     res.json(user);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching user data' });
+  }
+};
+
+export const googleLogin = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { credential } = req.body;
+    if (!credential) {
+      res.status(400).json({ message: 'Missing Google credential' });
+      return;
+    }
+
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    const payload = ticket.getPayload();
+    if (!payload || !payload.email || !payload.sub || !payload.name) {
+      res.status(400).json({ message: 'Invalid Google token' });
+      return;
+    }
+
+    // Find or create user
+    let user = await prisma.user.findUnique({ where: { email: payload.email } });
+    if (!user) {
+      user = await prisma.user.create({
+        data: {
+          email: payload.email,
+          name: payload.name,
+          googleId: payload.sub,
+        },
+      });
+    } else if (!user.googleId) {
+      // Link Google account if not already linked
+      user = await prisma.user.update({
+        where: { email: payload.email },
+        data: { googleId: payload.sub },
+      });
+    }
+
+    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET as string, {
+      expiresIn: '24h',
+    });
+
+    res.json({
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Google login failed' });
   }
 };
