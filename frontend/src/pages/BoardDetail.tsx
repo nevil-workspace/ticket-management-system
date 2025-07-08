@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ConfirmationModal } from '@/components/ui/confirmation-modal';
@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/dialog';
 import { boardAPI, ticketAPI } from '@/lib/api';
 import { showToast } from '@/lib/toast';
+import { useTheme } from '@/hooks/useTheme';
 
 interface Ticket {
   id: string;
@@ -92,6 +93,7 @@ export function BoardDetail() {
   const [ticketToDelete, setTicketToDelete] = useState<Ticket | null>(null);
   const [isDeletingTicket, setIsDeletingTicket] = useState(false);
   const [isDeletingColumn, setIsDeletingColumn] = useState(false);
+  const themeContext = useTheme();
 
   useEffect(() => {
     if (id) {
@@ -484,7 +486,7 @@ export function BoardDetail() {
                             <div
                               ref={provided.innerRef}
                               {...provided.droppableProps}
-                              className={`space-y-4 min-h-[200px] bg-gray-50 p-4 rounded-lg ${snapshot.isDraggingOver ? 'ring-2 ring-primary' : ''}`}
+                              className={`space-y-4 min-h-[200px] ${themeContext.theme === 'dark' ? 'bg-card' : 'bg-gray-50'} p-4 rounded-lg ${snapshot.isDraggingOver ? 'ring-2 ring-primary' : ''}`}
                             >
                               {column.tickets.map((ticket, idx) => (
                                 <Draggable key={ticket.id} draggableId={ticket.id} index={idx}>
@@ -521,8 +523,10 @@ export function BoardDetail() {
                                         </div>
                                       </div>
                                       <h3 className="font-medium pr-12">{ticket.title}</h3>
-                                      <p className="text-sm text-gray-500">{ticket.description}</p>
-                                      <span className="text-xs text-gray-400">
+                                      <p className="text-sm text-muted-foreground">
+                                        {ticket.description}
+                                      </p>
+                                      <span className="text-xs text-muted-foreground">
                                         Priority: {ticket.priority}
                                       </span>
                                     </div>
