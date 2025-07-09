@@ -17,26 +17,43 @@ import {
 import { boardAPI } from '@/lib/api';
 import toast from '@/lib/toast';
 import { useApi } from '@/hooks/useApi';
+import { userAPI } from '@/lib/api';
+import { UserMultiSelect } from '@/components/ui/user-multiselect';
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
+}
 
 interface Board {
   id: string;
   name: string;
   description: string;
   createdAt: string;
+  members?: User[];
 }
 
 interface EditBoardData {
   name: string;
   description: string;
+  memberIds: string[];
 }
 
 export function Boards() {
   const navigate = useNavigate();
   const [boards, setBoards] = useState<Board[]>([]);
+  const [isEditingBoard, setIsEditingBoard] = useState(false);
   const [editingBoard, setEditingBoard] = useState<Board | null>(null);
-  const [editData, setEditData] = useState<EditBoardData>({ name: '', description: '' });
+  const [editData, setEditData] = useState<EditBoardData>({
+    name: '',
+    description: '',
+    memberIds: [],
+  });
   const [boardToDelete, setBoardToDelete] = useState<Board | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [allUsers, setAllUsers] = useState<any[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(true);
 
   const { execute: fetchBoards, loading } = useApi<Board[]>({
     onSuccess: (data) => setBoards(data),
@@ -46,11 +63,21 @@ export function Boards() {
 
   useEffect(() => {
     fetchBoards(() => boardAPI.getBoards());
+    userAPI
+      .listUsers()
+      .then(setAllUsers)
+      .finally(() => setLoadingUsers(false));
   }, []);
 
   const handleEditBoard = (board: Board) => {
+    setIsEditingBoard(true);
     setEditingBoard(board);
-    setEditData({ name: board.name, description: board.description });
+    setEditData({
+      name: board.name,
+      description: board.description,
+      memberIds: (board.members || []).map((m: any) => m.id),
+    });
+    setIsEditingBoard(false);
   };
 
   const handleUpdateBoard = async (e: React.FormEvent) => {
@@ -58,20 +85,27 @@ export function Boards() {
     if (!editingBoard) return;
 
     const originalBoards = [...boards];
-
-    // Optimistic update
     setBoards(
       boards.map((board) => (board.id === editingBoard.id ? { ...board, ...editData } : board)),
     );
 
     try {
-      await boardAPI.updateBoard(editingBoard.id, editData);
+      setIsEditingBoard(true);
+      const updated = await boardAPI.updateBoard(editingBoard.id, {
+        name: editData.name,
+        description: editData.description,
+        memberIds: editData.memberIds,
+      });
+      setBoards(
+        boards.map((board) => (board.id === editingBoard.id ? { ...board, ...updated } : board)),
+      );
       setEditingBoard(null);
       toast.success('Board updated successfully');
+      setIsEditingBoard(false);
     } catch (error) {
-      // Revert optimistic update
       setBoards(originalBoards);
       toast.error('Failed to update board');
+      setIsEditingBoard(false);
     }
   };
 
@@ -168,6 +202,7 @@ export function Boards() {
                 type="text"
                 value={editData.name}
                 onChange={(e) => setEditData({ ...editData, name: e.target.value })}
+                disabled={isEditingBoard}
                 required
               />
             </div>
@@ -178,15 +213,32 @@ export function Boards() {
               <Textarea
                 id="edit-board-description"
                 value={editData.description}
+                disabled={isEditingBoard}
                 onChange={(e) => setEditData({ ...editData, description: e.target.value })}
                 rows={4}
               />
             </div>
+            <div className="space-y-2">
+              <UserMultiSelect
+                users={allUsers}
+                value={editData.memberIds}
+                onChange={(ids) => setEditData({ ...editData, memberIds: ids })}
+                label="Board Members"
+                disabled={loadingUsers || isEditingBoard}
+              />
+            </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setEditingBoard(null)}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setEditingBoard(null)}
+                disabled={isEditingBoard}
+              >
                 Cancel
               </Button>
-              <Button type="submit">Update Board</Button>
+              <Button type="submit" disabled={isEditingBoard}>
+                Update Board
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>

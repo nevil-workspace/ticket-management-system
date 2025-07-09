@@ -4,15 +4,18 @@ import { Column } from '@prisma/client';
 
 export const createBoard = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { name, description } = req.body;
+    const { name, description, memberIds } = req.body;
     const userId = (req as any).user.id;
-
+    // Ensure creator is always a member
+    const uniqueMemberIds = Array.from(
+      new Set([userId, ...(Array.isArray(memberIds) ? memberIds : [])]),
+    );
     const board = await prisma.board.create({
       data: {
         name,
         description,
         members: {
-          connect: { id: userId },
+          connect: uniqueMemberIds.map((id) => ({ id })),
         },
         columns: {
           create: [
@@ -29,7 +32,6 @@ export const createBoard = async (req: Request, res: Response): Promise<void> =>
         columns: true,
       },
     });
-
     res.status(201).json(board);
   } catch (error) {
     res.status(500).json({ message: 'Error creating board' });
@@ -117,7 +119,7 @@ export const getBoard = async (req: Request, res: Response): Promise<void> => {
 export const updateBoard = async (req: Request, res: Response): Promise<void> => {
   try {
     const { boardId } = req.params;
-    const { name, description } = req.body;
+    const { name, description, memberIds } = req.body;
     const userId = (req as any).user.id;
 
     const board = await prisma.board.findFirst({
@@ -136,15 +138,37 @@ export const updateBoard = async (req: Request, res: Response): Promise<void> =>
       return;
     }
 
+    const updateData: any = {};
+    if (name !== undefined) updateData.name = name;
+    if (description !== undefined) updateData.description = description;
+    if (memberIds !== undefined) {
+      updateData.members = { set: memberIds.map((id: string) => ({ id })) };
+    }
+
     const updatedBoard = await prisma.board.update({
       where: { id: boardId },
-      data: {
-        name,
-        description,
-      },
+      data: updateData,
       include: {
         members: true,
-        columns: true,
+        columns: {
+          orderBy: {
+            order: 'asc',
+          },
+          include: {
+            tickets: {
+              include: {
+                assignee: true,
+                watchers: true,
+                comments: {
+                  include: {
+                    user: true,
+                  },
+                },
+                history: true,
+              },
+            },
+          },
+        },
       },
     });
 

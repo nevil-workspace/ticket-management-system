@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ConfirmationModal } from '@/components/ui/confirmation-modal';
@@ -26,6 +26,8 @@ import {
 import { boardAPI, ticketAPI } from '@/lib/api';
 import { showToast } from '@/lib/toast';
 import { useTheme } from '@/hooks/useTheme';
+import { UserMultiSelect } from '@/components/ui/user-multiselect';
+import { userAPI } from '@/lib/api';
 
 interface Ticket {
   id: string;
@@ -35,6 +37,7 @@ interface Ticket {
   priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
   createdAt: string;
   columnId: string;
+  assignee?: { id: string; name: string; email: string };
 }
 
 interface Column {
@@ -49,17 +52,20 @@ interface Board {
   name: string;
   description: string;
   columns: Column[];
+  members?: { id: string; name: string; email: string }[];
 }
 
 interface EditTicketData {
   title: string;
   description: string;
   priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
+  assigneeId?: string;
 }
 
 interface EditBoardData {
   name: string;
   description: string;
+  memberIds: string[];
 }
 
 interface EditColumnData {
@@ -77,11 +83,13 @@ export function BoardDetail() {
     title: '',
     description: '',
     priority: 'MEDIUM',
+    assigneeId: undefined,
   });
   const [editingBoard, setEditingBoard] = useState<boolean>(false);
   const [editBoardData, setEditBoardData] = useState<EditBoardData>({
     name: '',
     description: '',
+    memberIds: [],
   });
   const [editingColumn, setEditingColumn] = useState<Column | null>(null);
   const [editColumnData, setEditColumnData] = useState<EditColumnData>({
@@ -93,11 +101,18 @@ export function BoardDetail() {
   const [ticketToDelete, setTicketToDelete] = useState<Ticket | null>(null);
   const [isDeletingTicket, setIsDeletingTicket] = useState(false);
   const [isDeletingColumn, setIsDeletingColumn] = useState(false);
+  const [allUsers, setAllUsers] = useState<any[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(true);
   const themeContext = useTheme();
 
   useEffect(() => {
     if (id) {
       fetchBoard();
+
+      userAPI
+        .listUsers()
+        .then(setAllUsers)
+        .finally(() => setLoadingUsers(false));
     }
   }, [id]);
 
@@ -172,6 +187,7 @@ export function BoardDetail() {
       title: ticket.title,
       description: ticket.description,
       priority: ticket.priority,
+      assigneeId: ticket.assignee?.id || '',
     });
   };
 
@@ -185,7 +201,14 @@ export function BoardDetail() {
       columns: board.columns.map((col) => ({
         ...col,
         tickets: col.tickets.map((ticket) =>
-          ticket.id === editingTicket.id ? { ...ticket, ...editTicketData } : ticket,
+          ticket.id === editingTicket.id
+            ? {
+                ...ticket,
+                ...editTicketData,
+                assignee:
+                  board.members?.find((m: any) => m.id === editTicketData.assigneeId) || undefined,
+              }
+            : ticket,
         ),
       })),
     }));
@@ -238,21 +261,45 @@ export function BoardDetail() {
     setEditBoardData({
       name: board.name,
       description: board.description,
+      memberIds: board.members?.map((x) => x.id) ?? [],
     });
   };
 
   const handleUpdateBoard = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!board) return;
-
     // Optimistic update
     updateBoardOptimistically((board) => ({
       ...board,
       ...editBoardData,
     }));
-
     try {
-      await boardAPI.updateBoard(board.id, editBoardData);
+      let updated = await boardAPI.updateBoard(board.id, {
+        name: editBoardData.name,
+        description: editBoardData.description,
+        memberIds: editBoardData.memberIds,
+      });
+
+      setBoard((prev) =>
+        prev
+          ? {
+              ...prev,
+              name: updated.name ?? prev.name,
+              description: updated.description ?? prev.description,
+              members: Array.isArray(updated.members) ? updated.members : prev.members,
+              // Only replace columns if present in response, else keep previous
+              columns: Array.isArray(updated.columns)
+                ? updated.columns.map((col: any, idx: number) => ({
+                    ...prev.columns[idx],
+                    ...col,
+                    tickets: Array.isArray(col.tickets)
+                      ? col.tickets
+                      : prev.columns[idx]?.tickets || [],
+                  }))
+                : prev.columns,
+            }
+          : null,
+      );
       setEditingBoard(false);
       showToast.success('Board updated successfully');
     } catch (err) {
@@ -260,7 +307,7 @@ export function BoardDetail() {
       const errorMessage = err instanceof Error ? err.message : 'Failed to update board';
       showToast.error(errorMessage);
       // Revert optimistic update on error
-      fetchBoard();
+      await fetchBoard();
     }
   };
 
@@ -529,6 +576,10 @@ export function BoardDetail() {
                                       <span className="text-xs text-muted-foreground">
                                         Priority: {ticket.priority}
                                       </span>
+                                      <br />
+                                      <span className="text-xs text-muted-foreground">
+                                        Assignee: {ticket?.assignee?.email ?? 'Unassigned'}
+                                      </span>
                                     </div>
                                   )}
                                 </Draggable>
@@ -665,6 +716,28 @@ export function BoardDetail() {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-ticket-assignee" className="text-sm font-medium">
+                  Assignee
+                </Label>
+                <Select
+                  value={editTicketData.assigneeId}
+                  onValueChange={(value) => setEditTicketData((d) => ({ ...d, assigneeId: value }))}
+                  disabled={!board || !board.members || board.members.length === 0}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select assignee" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(board?.members || []).map((member: any) => (
+                      <SelectItem key={member.id} value={member.id}>
+                        {member.name}{' '}
+                        <span className="text-xs text-muted-foreground">({member.email})</span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setEditingTicket(null)}>
                   Cancel
@@ -691,7 +764,7 @@ export function BoardDetail() {
                   id="edit-board-name"
                   type="text"
                   value={editBoardData.name}
-                  onChange={(e) => setEditBoardData({ ...editBoardData, name: e.target.value })}
+                  onChange={(e) => setEditBoardData((d) => ({ ...d, name: e.target.value }))}
                   required
                 />
               </div>
@@ -702,10 +775,17 @@ export function BoardDetail() {
                 <Textarea
                   id="edit-board-description"
                   value={editBoardData.description}
-                  onChange={(e) =>
-                    setEditBoardData({ ...editBoardData, description: e.target.value })
-                  }
+                  onChange={(e) => setEditBoardData((d) => ({ ...d, description: e.target.value }))}
                   rows={4}
+                />
+              </div>
+              <div className="space-y-2">
+                <UserMultiSelect
+                  users={allUsers}
+                  value={editBoardData.memberIds}
+                  onChange={(ids) => setEditBoardData((d) => ({ ...d, memberIds: ids }))}
+                  label="Board Members"
+                  disabled={loadingUsers}
                 />
               </div>
               <DialogFooter>

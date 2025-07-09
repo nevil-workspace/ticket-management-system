@@ -10,29 +10,44 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { ticketAPI } from '@/lib/api';
+import { ticketAPI, boardAPI } from '@/lib/api';
 import toast from '@/lib/toast';
 import { useForm } from '@/hooks/useForm';
+import { useEffect, useState } from 'react';
+import { useAuth } from '@/hooks/useAuth';
 
 interface TicketFormData {
   title: string;
   description: string;
   priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
+  assigneeId?: string;
 }
 
 export function NewTicket() {
   const { id: boardId } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [members, setMembers] = useState<any[]>([]);
+  const [loadingMembers, setLoadingMembers] = useState(true);
 
-  const { values, isSubmitting, handleChange, handleSubmit } = useForm<TicketFormData>({
+  useEffect(() => {
+    if (boardId) {
+      boardAPI
+        .getBoard(boardId)
+        .then((b) => setMembers(b.members || []))
+        .finally(() => setLoadingMembers(false));
+    }
+  }, [boardId]);
+
+  const { values, isSubmitting, handleChange, handleSubmit, setValues } = useForm<TicketFormData>({
     initialValues: {
       title: '',
       description: '',
       priority: 'MEDIUM',
+      assigneeId: user?.id,
     },
     onSubmit: async (formData) => {
       if (!boardId) return;
-
       await ticketAPI.createTicket({
         ...formData,
         boardId,
@@ -44,6 +59,12 @@ export function NewTicket() {
       toast.error('Failed to create ticket');
     },
   });
+
+  useEffect(() => {
+    if (user && !values.assigneeId) {
+      setValues((v) => ({ ...v, assigneeId: user.id }));
+    }
+  }, [user]);
 
   return (
     <div className="mx-auto max-w-md space-y-6">
@@ -96,6 +117,28 @@ export function NewTicket() {
               <SelectItem value="MEDIUM">Medium</SelectItem>
               <SelectItem value="HIGH">High</SelectItem>
               <SelectItem value="URGENT">Urgent</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="assignee" className="text-sm font-medium">
+            Assignee
+          </Label>
+          <Select
+            value={values.assigneeId}
+            onValueChange={(value) => handleChange('assigneeId', value)}
+            disabled={isSubmitting || loadingMembers}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select assignee" />
+            </SelectTrigger>
+            <SelectContent>
+              {members.map((member) => (
+                <SelectItem key={member.id} value={member.id}>
+                  {member.name}{' '}
+                  <span className="text-xs text-muted-foreground">({member.email})</span>
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>

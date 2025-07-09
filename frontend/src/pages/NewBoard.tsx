@@ -6,22 +6,42 @@ import { Label } from '@/components/ui/label';
 import { boardAPI } from '@/lib/api';
 import toast from '@/lib/toast';
 import { useForm } from '@/hooks/useForm';
+import { useEffect, useState } from 'react';
+import { userAPI } from '@/lib/api';
+import { UserMultiSelect } from '@/components/ui/user-multiselect';
+import { useAuth } from '@/hooks/useAuth';
 
 interface BoardFormData {
   name: string;
   description: string;
+  memberIds: string[];
 }
 
 export function NewBoard() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [users, setUsers] = useState<any[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(true);
 
-  const { values, isSubmitting, handleChange, handleSubmit } = useForm<BoardFormData>({
+  useEffect(() => {
+    userAPI
+      .listUsers()
+      .then(setUsers)
+      .finally(() => setLoadingUsers(false));
+  }, []);
+
+  const { values, isSubmitting, handleChange, handleSubmit, setValues } = useForm<BoardFormData>({
     initialValues: {
       name: '',
       description: '',
+      memberIds: user ? [user.id] : [],
     },
     onSubmit: async (formData) => {
-      await boardAPI.createBoard(formData);
+      await boardAPI.createBoard({
+        name: formData.name,
+        description: formData.description,
+        memberIds: formData.memberIds,
+      });
       toast.success('Board created successfully');
       navigate('/boards');
     },
@@ -29,6 +49,12 @@ export function NewBoard() {
       toast.error('Failed to create board');
     },
   });
+
+  useEffect(() => {
+    if (user && values.memberIds.length === 0) {
+      setValues((v) => ({ ...v, memberIds: [user.id] }));
+    }
+  }, [user]);
 
   return (
     <div className="mx-auto max-w-md space-y-6">
@@ -60,6 +86,15 @@ export function NewBoard() {
             onChange={(e) => handleChange('description', e.target.value)}
             rows={4}
             disabled={isSubmitting}
+          />
+        </div>
+        <div className="space-y-2">
+          <UserMultiSelect
+            users={users}
+            value={values.memberIds}
+            onChange={(ids) => handleChange('memberIds', ids)}
+            label="Board Members"
+            disabled={isSubmitting || loadingUsers}
           />
         </div>
         <div className="flex gap-4">

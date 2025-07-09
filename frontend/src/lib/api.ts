@@ -115,10 +115,10 @@ export const boardAPI = {
 
   getBoard: (id: string) => apiService.get<any>(`/boards/${id}`),
 
-  createBoard: (data: { name: string; description?: string }) =>
+  createBoard: (data: { name: string; description?: string; memberIds?: string[] }) =>
     apiService.post<any>('/boards', data),
 
-  updateBoard: (id: string, data: { name?: string; description?: string }) =>
+  updateBoard: (id: string, data: { name?: string; description?: string; memberIds?: string[] }) =>
     apiService.put<any>(`/boards/${id}`, data),
 
   deleteBoard: (id: string) => apiService.delete<{ message: string }>(`/boards/${id}`),
@@ -147,6 +147,7 @@ export const ticketAPI = {
     description?: string;
     priority?: string;
     boardId: string;
+    assigneeId?: string;
   }) => apiService.post<any>('/tickets', data),
 
   updateTicket: (
@@ -164,6 +165,10 @@ export const ticketAPI = {
 
   addComment: (ticketId: string, data: { content: string }) =>
     apiService.post<any>(`/tickets/${ticketId}/comments`, data),
+};
+
+export const userAPI = {
+  listUsers: () => apiService.get<any[]>('/auth/users'),
 };
 
 export default apiService;

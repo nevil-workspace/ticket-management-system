@@ -27,7 +27,11 @@ router.post(
 router.get('/', getBoards);
 router.get('/:boardId', getBoard);
 
-router.put('/:boardId', [body('name').optional(), body('description').optional()], updateBoard);
+router.put(
+  '/:boardId',
+  [body('name').optional(), body('description').optional(), body('memberIds').optional().isArray()],
+  updateBoard,
+);
 
 router.delete('/:boardId', deleteBoard);
 

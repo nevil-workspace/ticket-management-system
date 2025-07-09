@@ -4,7 +4,7 @@ import { Ticket } from '@prisma/client';
 
 export const createTicket = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { title, description, priority, boardId } = req.body;
+    const { title, description, priority, boardId, assigneeId } = req.body;
     const userId = (req as any).user.id;
 
     const board = await prisma.board.findFirst({
@@ -18,11 +18,18 @@ export const createTicket = async (req: Request, res: Response): Promise<void> =
       },
       include: {
         columns: true,
+        members: true,
       },
     });
 
     if (!board) {
       res.status(404).json({ message: 'Board not found' });
+      return;
+    }
+
+    // Validate assigneeId is a member of the board
+    if (assigneeId && !board.members.some((m) => m.id === assigneeId)) {
+      res.status(400).json({ message: 'Assignee must be a board member' });
       return;
     }
 
@@ -45,6 +52,7 @@ export const createTicket = async (req: Request, res: Response): Promise<void> =
         column: {
           connect: { id: firstColumn.id },
         },
+        assignee: assigneeId ? { connect: { id: assigneeId } } : undefined,
         watchers: {
           connect: { id: userId },
         },
@@ -152,8 +160,6 @@ export const updateTicket = async (req: Request, res: Response): Promise<void> =
     const { title, description, priority, columnId, assigneeId } = req.body;
     const userId = (req as any).user.id;
 
-    console.log('Updating ticket:', { ticketId, columnId, userId });
-
     const ticket = await prisma.ticket.findFirst({
       where: {
         id: ticketId,
@@ -167,19 +173,23 @@ export const updateTicket = async (req: Request, res: Response): Promise<void> =
       },
       include: {
         column: true,
+        board: { include: { members: true } },
       },
     });
 
     if (!ticket) {
-      console.log('Ticket not found:', ticketId);
       res.status(404).json({ message: 'Ticket not found' });
       return;
     }
 
-    console.log('Found ticket:', ticket);
+    // Validate assigneeId is a member of the board
+    if (assigneeId && !ticket.board.members.some((m) => m.id === assigneeId)) {
+      res.status(400).json({ message: 'Assignee must be a board member' });
+      return;
+    }
 
     // Prepare update data object, only including provided fields
-    const updateData: Partial<Ticket> = {};
+    const updateData: any = {};
     if (title !== undefined) updateData.title = title;
     if (description !== undefined) updateData.description = description;
     if (priority !== undefined) updateData.priority = priority;
@@ -224,7 +234,6 @@ export const updateTicket = async (req: Request, res: Response): Promise<void> =
 
     res.json(updatedTicket);
   } catch (error) {
-    console.error('Error updating ticket:', error);
     res.status(500).json({ message: 'Error updating ticket' });
   }
 };
