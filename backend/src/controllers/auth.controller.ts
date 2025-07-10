@@ -3,8 +3,26 @@ import jwt from 'jsonwebtoken';
 import { prisma } from '../index';
 import bcrypt from 'bcryptjs';
 import { OAuth2Client } from 'google-auth-library';
+import { Storage } from '@google-cloud/storage';
+import multer from 'multer';
+import dotenv from 'dotenv';
+import { Request as ExpressRequest } from 'express';
+import { uploadProfileImage, deleteProfileImage, UploadProvider } from '../uploadProvider';
+
+interface MulterRequest extends ExpressRequest {
+  file?: Express.Multer.File;
+}
+
+dotenv.config();
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+const storage = new Storage({
+  projectId: process.env.GCP_PROJECT_ID,
+  keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS,
+});
+const bucket = storage.bucket(process.env.GCP_BUCKET_NAME!);
+const upload = multer({ storage: multer.memoryStorage() });
 
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -134,6 +152,7 @@ export const googleLogin = async (req: Request, res: Response): Promise<void> =>
           email: payload.email,
           name: payload.name,
           googleId: payload.sub,
+          profileImage: payload.picture,
         },
       });
     } else if (!user.googleId) {
@@ -154,6 +173,7 @@ export const googleLogin = async (req: Request, res: Response): Promise<void> =>
         id: user.id,
         email: user.email,
         name: user.name,
+        profileImage: user.profileImage,
       },
     });
   } catch (error) {
@@ -175,5 +195,48 @@ export const listUsers = async (req: Request, res: Response): Promise<void> => {
     res.json(users);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching users' });
+  }
+};
+
+export const editUser = async (req: MulterRequest, res: Response): Promise<void> => {
+  try {
+    const userId = (req as any).user.id;
+    const { name } = req.body;
+    let profileImageUrl: string | undefined;
+    const provider = (process.env.PROFILE_IMAGE_PROVIDER || 'gcp') as UploadProvider;
+
+    // Enforce 3MB file size limit
+    if (req.file && req.file.size > 3 * 1024 * 1024) {
+      res.status(400).json({ message: 'Profile picture must be less than 3MB' });
+      return;
+    }
+
+    if (req.file) {
+      // Remove old image if present
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+      if (user?.profileImage) {
+        await deleteProfileImage({ provider, userId, previousUrl: user.profileImage });
+      }
+      // Upload new image
+      profileImageUrl = await uploadProfileImage({ provider, userId, file: req.file });
+    }
+
+    const updateData: any = {};
+    if (name) updateData.name = name;
+    if (profileImageUrl) updateData.profileImage = profileImageUrl;
+
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: updateData,
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        profileImage: true,
+      },
+    });
+    res.json(updatedUser);
+  } catch (error) {
+    res.status(500).json({ message: 'Error updating user profile', error });
   }
 };

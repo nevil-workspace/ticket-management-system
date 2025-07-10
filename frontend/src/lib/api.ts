@@ -169,6 +169,10 @@ export const ticketAPI = {
 
 export const userAPI = {
   listUsers: () => apiService.get<any[]>('/auth/users'),
+  editUser: (data: FormData) =>
+    api.put<any>('/auth/me', data, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
 };
 
 export default apiService;

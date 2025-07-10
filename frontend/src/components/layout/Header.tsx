@@ -3,11 +3,14 @@ import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth.tsx';
 import { useTheme } from '@/hooks/useTheme';
+import { useState } from 'react';
+import { EditProfileDialog } from '@/components/ui/EditProfileDialog';
 
 export function Header() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
 
   return (
     <header className="border-b">
@@ -34,10 +37,22 @@ export function Header() {
           </Button>
           {user ? (
             <>
+              {user.profileImage && (
+                <img
+                  src={user.profileImage}
+                  alt={user.name}
+                  className="w-8 h-8 rounded-full object-cover border"
+                  style={{ marginRight: '0.5rem' }}
+                />
+              )}
               <span className="text-sm text-muted-foreground">{user.name}</span>
+              <Button variant="secondary" onClick={() => setIsEditProfileOpen(true)}>
+                Edit Profile
+              </Button>
               <Button variant="outline" onClick={logout}>
                 Logout
               </Button>
+              <EditProfileDialog open={isEditProfileOpen} onOpenChange={setIsEditProfileOpen} />
             </>
           ) : (
             <>

@@ -5,9 +5,12 @@ import {
   getCurrentUser,
   googleLogin,
   listUsers,
+  editUser,
 } from '../controllers/auth.controller';
 import { authenticateToken } from '../middleware/auth';
 import { body } from 'express-validator';
+import multer from 'multer';
+const upload = multer({ storage: multer.memoryStorage() });
 
 const router = Router();
 
@@ -33,6 +36,8 @@ router.post(
 );
 
 router.get('/me', authenticateToken, getCurrentUser);
+
+router.put('/me', authenticateToken, upload.single('profileImage'), editUser);
 
 router.post('/google', googleLogin);
 
