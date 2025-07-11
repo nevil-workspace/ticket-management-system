@@ -11,6 +11,7 @@ import { userAPI } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import showToast from '@/lib/toast';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 export function EditProfileDialog({
   open,
@@ -83,7 +84,7 @@ export function EditProfileDialog({
             </div>
             <label className="w-full flex flex-col gap-1">
               <span className="font-medium">Name</span>
-              <input
+              <Input
                 className="border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -91,8 +92,17 @@ export function EditProfileDialog({
               />
             </label>
             <label className="w-full flex flex-col gap-1">
+              <span className="font-medium">Email</span>
+              <Input
+                className="border rounded px-3 py-2 bg-gray-100 text-gray-500 cursor-not-allowed"
+                value={user?.email || ''}
+                disabled
+                readOnly
+              />
+            </label>
+            <label className="w-full flex flex-col gap-1">
               <span className="font-medium">Profile Picture</span>
-              <input type="file" accept="image/*" onChange={handleFileChange} />
+              <Input type="file" accept="image/*" onChange={handleFileChange} />
             </label>
           </div>
           {error && <div className="text-red-500 text-sm text-center">{error}</div>}
