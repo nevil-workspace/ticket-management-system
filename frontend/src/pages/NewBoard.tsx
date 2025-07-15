@@ -3,19 +3,21 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { boardAPI } from '@/lib/api';
+import { boardAPI, userAPI } from '@/lib/api';
 import toast from '@/lib/toast';
-import { useForm } from '@/hooks/useForm';
+import { useForm, Controller } from 'react-hook-form';
 import { useEffect, useState } from 'react';
-import { userAPI } from '@/lib/api';
 import { UserMultiSelect } from '@/components/ui/user-multiselect';
 import { useAuth } from '@/hooks/useAuth';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
 
-interface BoardFormData {
-  name: string;
-  description: string;
-  memberIds: string[];
-}
+const boardSchema = z.object({
+  name: z.string().min(2, { message: 'Name is required' }),
+  description: z.string().min(2, { message: 'Description is required' }),
+  memberIds: z.array(z.string()).min(1, { message: 'At least one member is required' }),
+});
+type BoardFormData = z.infer<typeof boardSchema>;
 
 export function NewBoard() {
   const navigate = useNavigate();
@@ -30,31 +32,36 @@ export function NewBoard() {
       .finally(() => setLoadingUsers(false));
   }, []);
 
-  const { values, isSubmitting, handleChange, handleSubmit, setValues } = useForm<BoardFormData>({
-    initialValues: {
+  const {
+    handleSubmit,
+    control,
+    setValue,
+    formState: { isSubmitting, errors },
+    watch,
+  } = useForm<BoardFormData>({
+    resolver: zodResolver(boardSchema),
+    defaultValues: {
       name: '',
       description: '',
       memberIds: user ? [user.id] : [],
     },
-    onSubmit: async (formData) => {
-      await boardAPI.createBoard({
-        name: formData.name,
-        description: formData.description,
-        memberIds: formData.memberIds,
-      });
-      toast.success('Board created successfully');
-      navigate('/boards');
-    },
-    onError: (_) => {
-      toast.error('Failed to create board');
-    },
   });
 
   useEffect(() => {
-    if (user && values.memberIds.length === 0) {
-      setValues((v) => ({ ...v, memberIds: [user.id] }));
+    if (user && watch('memberIds').length === 0) {
+      setValue('memberIds', [user.id]);
     }
-  }, [user]);
+  }, [user, setValue, watch]);
+
+  const onSubmit = async (formData: BoardFormData) => {
+    try {
+      await boardAPI.createBoard(formData);
+      toast.success('Board created successfully');
+      navigate('/boards');
+    } catch {
+      toast.error('Failed to create board');
+    }
+  };
 
   return (
     <div className="mx-auto max-w-md space-y-6">
@@ -62,40 +69,63 @@ export function NewBoard() {
         <h1 className="text-3xl font-bold">Create New Board</h1>
         <p className="text-gray-500">Create a new board to organize your tickets</p>
       </div>
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="name" className="text-sm font-medium">
             Name
           </Label>
-          <Input
-            id="name"
-            type="text"
-            value={values.name}
-            onChange={(e) => handleChange('name', e.target.value)}
-            required
-            disabled={isSubmitting}
+          <Controller
+            name="name"
+            control={control}
+            render={({ field }) => (
+              <Input
+                id="name"
+                type="text"
+                {...field}
+                required
+                disabled={isSubmitting}
+                aria-invalid={!!errors.name}
+              />
+            )}
           />
+          {errors.name && <p className="text-xs text-red-500">{errors.name.message}</p>}
         </div>
         <div className="space-y-2">
           <Label htmlFor="description" className="text-sm font-medium">
             Description
           </Label>
-          <Textarea
-            id="description"
-            value={values.description}
-            onChange={(e) => handleChange('description', e.target.value)}
-            rows={4}
-            disabled={isSubmitting}
+          <Controller
+            name="description"
+            control={control}
+            render={({ field }) => (
+              <Textarea
+                id="description"
+                {...field}
+                rows={4}
+                disabled={isSubmitting}
+                aria-invalid={!!errors.description}
+              />
+            )}
           />
+          {errors.description && (
+            <p className="text-xs text-red-500">{errors.description.message}</p>
+          )}
         </div>
         <div className="space-y-2">
-          <UserMultiSelect
-            users={users}
-            value={values.memberIds}
-            onChange={(ids) => handleChange('memberIds', ids)}
-            label="Board Members"
-            disabled={isSubmitting || loadingUsers}
+          <Controller
+            name="memberIds"
+            control={control}
+            render={({ field }) => (
+              <UserMultiSelect
+                users={users}
+                value={field.value}
+                onChange={field.onChange}
+                label="Board Members"
+                disabled={isSubmitting || loadingUsers}
+              />
+            )}
           />
+          {errors.memberIds && <p className="text-xs text-red-500">{errors.memberIds.message}</p>}
         </div>
         <div className="flex gap-4">
           <Button

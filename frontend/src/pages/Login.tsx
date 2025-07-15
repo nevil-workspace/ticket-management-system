@@ -4,32 +4,38 @@ import { useAuth } from '@/hooks/useAuth.tsx';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import toast from '@/lib/toast';
-import { useForm } from '@/hooks/useForm';
 import { GoogleLogin } from '@react-oauth/google';
+import { useForm, Controller } from 'react-hook-form';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
 
-interface LoginFormData {
-  email: string;
-  password: string;
-}
+const loginSchema = z.object({
+  email: z.email({ message: 'Invalid email address' }),
+  password: z.string().min(6, { message: 'Password must be at least 6 characters' }),
+});
+type LoginFormData = z.infer<typeof loginSchema>;
 
 export function Login() {
   const navigate = useNavigate();
   const { login } = useAuth();
+  const {
+    handleSubmit,
+    control,
+    formState: { isSubmitting, errors },
+  } = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: '', password: '' },
+  });
 
-  const { values, isSubmitting, handleChange, handleSubmit } = useForm<LoginFormData>({
-    initialValues: {
-      email: '',
-      password: '',
-    },
-    onSubmit: async (formData) => {
+  const onSubmit = async (formData: LoginFormData) => {
+    try {
       await login(formData.email, formData.password);
       toast.success('Login successful');
       navigate('/boards');
-    },
-    onError: (_) => {
+    } catch {
       toast.error('Invalid email or password');
-    },
-  });
+    }
+  };
 
   return (
     <div className="mx-auto max-w-md space-y-6">
@@ -54,32 +60,46 @@ export function Login() {
         />
         <span className="text-gray-400 text-xs">or</span>
       </div>
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="email" className="text-sm font-medium">
             Email
           </Label>
-          <Input
-            id="email"
-            type="email"
-            value={values.email}
-            onChange={(e) => handleChange('email', e.target.value)}
-            required
-            disabled={isSubmitting}
+          <Controller
+            name="email"
+            control={control}
+            render={({ field }) => (
+              <Input
+                id="email"
+                type="email"
+                {...field}
+                required
+                disabled={isSubmitting}
+                aria-invalid={!!errors.email}
+              />
+            )}
           />
+          {errors.email && <p className="text-xs text-red-500">{errors.email.message}</p>}
         </div>
         <div className="space-y-2">
           <Label htmlFor="password" className="text-sm font-medium">
             Password
           </Label>
-          <Input
-            id="password"
-            type="password"
-            value={values.password}
-            onChange={(e) => handleChange('password', e.target.value)}
-            required
-            disabled={isSubmitting}
+          <Controller
+            name="password"
+            control={control}
+            render={({ field }) => (
+              <Input
+                id="password"
+                type="password"
+                {...field}
+                required
+                disabled={isSubmitting}
+                aria-invalid={!!errors.password}
+              />
+            )}
           />
+          {errors.password && <p className="text-xs text-red-500">{errors.password.message}</p>}
         </div>
         <Button type="submit" className="w-full" disabled={isSubmitting}>
           {isSubmitting ? 'Logging in...' : 'Login'}

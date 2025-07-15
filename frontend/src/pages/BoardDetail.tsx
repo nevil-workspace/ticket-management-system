@@ -74,10 +74,12 @@ interface EditColumnData {
 
 export function BoardDetail() {
   const { id } = useParams<{ id: string }>();
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const [board, setBoard] = useState<Board | null>(null);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  const [isEditingTicket, setIsEditingTicket] = useState(false);
   const [editingTicket, setEditingTicket] = useState<Ticket | null>(null);
   const [editTicketData, setEditTicketData] = useState<EditTicketData>({
     title: '',
@@ -85,24 +87,32 @@ export function BoardDetail() {
     priority: 'MEDIUM',
     assigneeId: undefined,
   });
+
   const [editingBoard, setEditingBoard] = useState<boolean>(false);
   const [editBoardData, setEditBoardData] = useState<EditBoardData>({
     name: '',
     description: '',
     memberIds: [],
   });
+
+  const [isSubmittingColumnEdit, setIsSubmittingColumnEdit] = useState(false);
   const [editingColumn, setEditingColumn] = useState<Column | null>(null);
   const [editColumnData, setEditColumnData] = useState<EditColumnData>({
     name: '',
   });
+
   const [creatingColumn, setCreatingColumn] = useState<boolean>(false);
   const [newColumnName, setNewColumnName] = useState<string>('');
+
+  const [isDeletingColumn, setIsDeletingColumn] = useState(false);
   const [columnToDelete, setColumnToDelete] = useState<Column | null>(null);
+
   const [ticketToDelete, setTicketToDelete] = useState<Ticket | null>(null);
   const [isDeletingTicket, setIsDeletingTicket] = useState(false);
-  const [isDeletingColumn, setIsDeletingColumn] = useState(false);
+
   const [allUsers, setAllUsers] = useState<any[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
+
   const themeContext = useTheme();
 
   useEffect(() => {
@@ -195,6 +205,8 @@ export function BoardDetail() {
     e.preventDefault();
     if (!editingTicket || !board) return;
 
+    setIsEditingTicket(true);
+
     // Optimistic update
     updateBoardOptimistically((board) => ({
       ...board,
@@ -223,6 +235,8 @@ export function BoardDetail() {
       showToast.error(errorMessage);
       // Revert optimistic update on error
       fetchBoard();
+    } finally {
+      setIsEditingTicket(false);
     }
   };
 
@@ -343,6 +357,8 @@ export function BoardDetail() {
     e.preventDefault();
     if (!editingColumn || !board) return;
 
+    setIsSubmittingColumnEdit(true);
+
     // Optimistic update
     updateBoardOptimistically((board) => ({
       ...board,
@@ -361,6 +377,8 @@ export function BoardDetail() {
       showToast.error(errorMessage);
       // Revert optimistic update on error
       fetchBoard();
+    } finally {
+      setIsSubmittingColumnEdit(false);
     }
   };
 
@@ -653,7 +671,9 @@ export function BoardDetail() {
                 <Button type="button" variant="outline" onClick={() => setEditingColumn(null)}>
                   Cancel
                 </Button>
-                <Button type="submit">Update Column</Button>
+                <Button type="submit" disabled={isSubmittingColumnEdit}>
+                  {isSubmittingColumnEdit ? 'Updating Column...' : 'Update Column'}
+                </Button>
               </DialogFooter>
             </form>
           </DialogContent>
@@ -742,7 +762,9 @@ export function BoardDetail() {
                 <Button type="button" variant="outline" onClick={() => setEditingTicket(null)}>
                   Cancel
                 </Button>
-                <Button type="submit">Update Ticket</Button>
+                <Button type="submit" disabled={isEditingTicket}>
+                  {isEditingTicket ? 'Updating Ticket...' : 'Update Ticket'}
+                </Button>
               </DialogFooter>
             </form>
           </DialogContent>

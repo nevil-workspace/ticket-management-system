@@ -19,6 +19,9 @@ import toast from '@/lib/toast';
 import { useApi } from '@/hooks/useApi';
 import { userAPI } from '@/lib/api';
 import { UserMultiSelect } from '@/components/ui/user-multiselect';
+import { useForm, Controller } from 'react-hook-form';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
 
 interface User {
   id: string;
@@ -34,22 +37,17 @@ interface Board {
   members?: User[];
 }
 
-interface EditBoardData {
-  name: string;
-  description: string;
-  memberIds: string[];
-}
+const editBoardSchema = z.object({
+  name: z.string().min(2, { message: 'Name is required' }),
+  description: z.string().min(2, { message: 'Description is required' }),
+  memberIds: z.array(z.string()).min(1, { message: 'At least one member is required' }),
+});
+type EditBoardData = z.infer<typeof editBoardSchema>;
 
 export function Boards() {
   const navigate = useNavigate();
   const [boards, setBoards] = useState<Board[]>([]);
-  const [isEditingBoard, setIsEditingBoard] = useState(false);
-  const [editingBoard, setEditingBoard] = useState<Board | null>(null);
-  const [editData, setEditData] = useState<EditBoardData>({
-    name: '',
-    description: '',
-    memberIds: [],
-  });
+  const [editingBoardId, setEditingBoardId] = useState<string | null>(null);
   const [boardToDelete, setBoardToDelete] = useState<Board | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [allUsers, setAllUsers] = useState<any[]>([]);
@@ -61,6 +59,20 @@ export function Boards() {
     showToast: false,
   });
 
+  const {
+    handleSubmit: handleEditSubmit,
+    control: editControl,
+    reset: resetEditForm,
+    formState: { isSubmitting: isEditSubmitting, errors: editErrors },
+  } = useForm<EditBoardData>({
+    resolver: zodResolver(editBoardSchema),
+    defaultValues: {
+      name: '',
+      description: '',
+      memberIds: [],
+    },
+  });
+
   useEffect(() => {
     fetchBoards(() => boardAPI.getBoards());
     userAPI
@@ -69,43 +81,39 @@ export function Boards() {
       .finally(() => setLoadingUsers(false));
   }, []);
 
+  // Find the board being edited
+  const editingBoard = editingBoardId ? boards.find((b) => b.id === editingBoardId) : null;
+
+  useEffect(() => {
+    if (editingBoard) {
+      resetEditForm({
+        name: editingBoard.name,
+        description: editingBoard.description,
+        memberIds: (editingBoard.members || []).map((m: any) => m.id),
+      });
+    }
+  }, [editingBoard, resetEditForm]);
+
   const handleEditBoard = (board: Board) => {
-    setIsEditingBoard(true);
-    setEditingBoard(board);
-    setEditData({
-      name: board.name,
-      description: board.description,
-      memberIds: (board.members || []).map((m: any) => m.id),
-    });
-    setIsEditingBoard(false);
+    setEditingBoardId(board.id);
   };
 
-  const handleUpdateBoard = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onEditSubmit = async (data: EditBoardData) => {
     if (!editingBoard) return;
-
     const originalBoards = [...boards];
     setBoards(
-      boards.map((board) => (board.id === editingBoard.id ? { ...board, ...editData } : board)),
+      boards.map((board) => (board.id === editingBoard.id ? { ...board, ...data } : board)),
     );
-
     try {
-      setIsEditingBoard(true);
-      const updated = await boardAPI.updateBoard(editingBoard.id, {
-        name: editData.name,
-        description: editData.description,
-        memberIds: editData.memberIds,
-      });
+      const updated = await boardAPI.updateBoard(editingBoard.id, data);
       setBoards(
         boards.map((board) => (board.id === editingBoard.id ? { ...board, ...updated } : board)),
       );
-      setEditingBoard(null);
+      setEditingBoardId(null);
       toast.success('Board updated successfully');
-      setIsEditingBoard(false);
     } catch (error) {
       setBoards(originalBoards);
       toast.error('Failed to update board');
-      setIsEditingBoard(false);
     }
   };
 
@@ -186,58 +194,83 @@ export function Boards() {
         ))}
       </div>
 
-      <Dialog open={!!editingBoard} onOpenChange={(open) => !open && setEditingBoard(null)}>
+      <Dialog open={!!editingBoard} onOpenChange={(open) => !open && setEditingBoardId(null)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit Board</DialogTitle>
             <DialogDescription>Update board details</DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleUpdateBoard} className="space-y-4">
+          <form onSubmit={handleEditSubmit(onEditSubmit)} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="edit-board-name" className="text-sm font-medium">
                 Name
               </Label>
-              <Input
-                id="edit-board-name"
-                type="text"
-                value={editData.name}
-                onChange={(e) => setEditData({ ...editData, name: e.target.value })}
-                disabled={isEditingBoard}
-                required
+              <Controller
+                name="name"
+                control={editControl}
+                render={({ field }) => (
+                  <Input
+                    id="edit-board-name"
+                    type="text"
+                    {...field}
+                    disabled={isEditSubmitting}
+                    required
+                    aria-invalid={!!editErrors.name}
+                  />
+                )}
               />
+              {editErrors.name && <p className="text-xs text-red-500">{editErrors.name.message}</p>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-board-description" className="text-sm font-medium">
                 Description
               </Label>
-              <Textarea
-                id="edit-board-description"
-                value={editData.description}
-                disabled={isEditingBoard}
-                onChange={(e) => setEditData({ ...editData, description: e.target.value })}
-                rows={4}
+              <Controller
+                name="description"
+                control={editControl}
+                render={({ field }) => (
+                  <Textarea
+                    id="edit-board-description"
+                    {...field}
+                    disabled={isEditSubmitting}
+                    rows={4}
+                    aria-invalid={!!editErrors.description}
+                  />
+                )}
               />
+              {editErrors.description && (
+                <p className="text-xs text-red-500">{editErrors.description.message}</p>
+              )}
             </div>
             <div className="space-y-2">
-              <UserMultiSelect
-                users={allUsers}
-                value={editData.memberIds}
-                onChange={(ids) => setEditData({ ...editData, memberIds: ids })}
-                label="Board Members"
-                disabled={loadingUsers || isEditingBoard}
+              <Controller
+                name="memberIds"
+                control={editControl}
+                render={({ field }) => (
+                  <UserMultiSelect
+                    users={allUsers}
+                    value={field.value}
+                    onChange={field.onChange}
+                    label="Board Members"
+                    disabled={loadingUsers || isEditSubmitting}
+                  />
+                )}
               />
+              {editErrors.memberIds && (
+                <p className="text-xs text-red-500">{editErrors.memberIds.message}</p>
+              )}
             </div>
             <DialogFooter>
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setEditingBoard(null)}
-                disabled={isEditingBoard}
+                onClick={() => setEditingBoardId(null)}
+                disabled={isEditSubmitting}
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isEditingBoard}>
-                Update Board
+              <Button type="submit" disabled={isEditSubmitting}>
+                {isEditSubmitting ? 'Updating...' : 'Update Board'}
               </Button>
             </DialogFooter>
           </form>
