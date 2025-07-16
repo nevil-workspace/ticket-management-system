@@ -105,18 +105,18 @@ export const createTicket = async (req: Request, res: Response): Promise<void> =
     const user = (await prisma.user.findUnique({ where: { id: userId } })) || undefined;
     historyEntries.push({
       ticketId: ticket.id,
-      field: 'CREATED',
-      newValue: title,
-      userId,
-      message: getHistoryMessage({ field: 'CREATED', user }),
-    });
-
-    historyEntries.push({
-      ticketId: ticket.id,
       field: 'STATUS',
       newValue: 'Backlog',
       userId,
       message: getHistoryMessage({ field: 'STATUS', user }),
+    });
+
+    historyEntries.push({
+      ticketId: ticket.id,
+      field: 'CREATED',
+      newValue: title,
+      userId,
+      message: getHistoryMessage({ field: 'CREATED', user }),
     });
 
     if (historyEntries.length > 0) {

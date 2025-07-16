@@ -512,7 +512,7 @@ export function TicketDetail() {
                         {new Date(h.createdAt).toLocaleString()}
                       </span>
                     </div>
-                    {(h.oldValue || h.newValue) && (
+                    {h.oldValue && h.newValue && (
                       <div className="text-xs text-muted-foreground mt-1">
                         <span className="font-bold">From:</span> {h.oldValue ?? '—'}{' '}
                         <span className="font-bold">To:</span> {h.newValue ?? '—'}
