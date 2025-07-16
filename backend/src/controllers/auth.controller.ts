@@ -181,7 +181,7 @@ export const googleLogin = async (req: Request, res: Response): Promise<void> =>
   }
 };
 
-export const listUsers = async (req: Request, res: Response): Promise<void> => {
+export const listUsers = async (_req: Request, res: Response): Promise<void> => {
   try {
     const users = await prisma.user.findMany({
       select: {

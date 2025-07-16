@@ -560,7 +560,8 @@ export function BoardDetail() {
                                       ref={provided.innerRef}
                                       {...provided.draggableProps}
                                       {...provided.dragHandleProps}
-                                      className={`rounded-lg border bg-card p-4 space-y-2 cursor-move hover:shadow-md transition-shadow relative group ${snapshot.isDragging ? 'opacity-70' : ''}`}
+                                      className={`rounded-lg border bg-card p-4 space-y-2 cursor-pointer hover:shadow-md transition-shadow relative group ${snapshot.isDragging ? 'opacity-70' : ''}`}
+                                      onClick={() => navigate(`/tickets/${ticket.id}`)}
                                     >
                                       <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                         <div className="flex gap-1">

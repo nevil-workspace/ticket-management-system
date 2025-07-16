@@ -6,6 +6,8 @@ import {
   updateTicket,
   deleteTicket,
   addComment,
+  editComment,
+  deleteComment,
 } from '../controllers/ticket.controller';
 import { authenticateToken, isBoardMember } from '../middleware/auth';
 import { body } from 'express-validator';
@@ -49,5 +51,12 @@ router.post(
   [body('content').notEmpty().withMessage('Comment content is required')],
   addComment,
 );
+
+router.put(
+  '/:ticketId/comments/:commentId',
+  [body('content').notEmpty().withMessage('Comment content is required')],
+  editComment,
+);
+router.delete('/:ticketId/comments/:commentId', deleteComment);
 
 export default router;

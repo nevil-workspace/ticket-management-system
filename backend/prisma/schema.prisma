@@ -11,18 +11,19 @@ datasource db {
 }
 
 model User {
-  id              String    @id @default(uuid())
-  email           String    @unique
+  id              String          @id @default(uuid())
+  email           String          @unique
   name            String
   profileImage    String?
-  googleId        String?   @unique
+  googleId        String?         @unique
   password        String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  boards          Board[]   @relation("BoardMembers")
-  assignedTickets Ticket[]  @relation("TicketAssignee")
-  watchingTickets Ticket[]  @relation("TicketWatchers")
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  boards          Board[]         @relation("BoardMembers")
+  assignedTickets Ticket[]        @relation("TicketAssignee")
+  watchingTickets Ticket[]        @relation("TicketWatchers")
   comments        Comment[]
+  TicketHistory   TicketHistory[]
 }
 
 model Board {
@@ -67,14 +68,15 @@ model Ticket {
 }
 
 model Comment {
-  id        String   @id @default(uuid())
-  content   String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  ticketId  String
-  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id            String          @id @default(uuid())
+  content       String
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  ticketId      String
+  ticket        Ticket          @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  TicketHistory TicketHistory[]
 }
 
 model TicketHistory {
@@ -82,9 +84,14 @@ model TicketHistory {
   field     String
   oldValue  String?
   newValue  String?
+  message   String?
   createdAt DateTime @default(now())
   ticketId  String
   ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  commentId String?
+  comment   Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
 }
 
 enum Priority {

@@ -165,6 +165,10 @@ export const ticketAPI = {
 
   addComment: (ticketId: string, data: { content: string }) =>
     apiService.post<any>(`/tickets/${ticketId}/comments`, data),
+  editComment: (ticketId: string, commentId: string, data: { content: string }) =>
+    apiService.put<any>(`/tickets/${ticketId}/comments/${commentId}`, data),
+  deleteComment: (ticketId: string, commentId: string) =>
+    apiService.delete<{ message: string }>(`/tickets/${ticketId}/comments/${commentId}`),
 };
 
 export const userAPI = {

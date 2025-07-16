@@ -9,6 +9,7 @@ import { BoardDetail } from '@/pages/BoardDetail';
 import { NewTicket } from '@/pages/NewTicket';
 import { Toaster } from '@/components/ui/sonner';
 import { ThemeProvider } from '@/hooks/useTheme';
+import { TicketDetail } from '@/pages/TicketDetail';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -58,6 +59,14 @@ function App() {
                 element={
                   <PrivateRoute>
                     <NewTicket />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/tickets/:ticketId"
+                element={
+                  <PrivateRoute>
+                    <TicketDetail />
                   </PrivateRoute>
                 }
               />
