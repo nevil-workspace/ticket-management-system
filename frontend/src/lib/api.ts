@@ -138,7 +138,24 @@ export const boardAPI = {
 };
 
 export const ticketAPI = {
-  getTickets: (boardId: string) => apiService.get<any[]>(`/tickets/board/${boardId}`),
+  getTickets: (boardId: string, filters?: {
+    q?: string;
+    priority?: string;
+    status?: string;
+    assigneeId?: string;
+  }) => {
+    let url = `/tickets/board/${boardId}`;
+    if (filters) {
+      const params = new URLSearchParams();
+      if (filters.q) params.append('q', filters.q);
+      if (filters.priority) params.append('priority', filters.priority);
+      if (filters.status) params.append('status', filters.status);
+      if (filters.assigneeId) params.append('assigneeId', filters.assigneeId);
+      const qs = params.toString();
+      if (qs) url += `?${qs}`;
+    }
+    return apiService.get<any[]>(url);
+  },
 
   getTicket: (id: string) => apiService.get<any>(`/tickets/${id}`),
 

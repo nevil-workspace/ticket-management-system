@@ -26,7 +26,7 @@ import {
 import { boardAPI, ticketAPI } from '@/lib/api';
 import { showToast } from '@/lib/toast';
 import { useTheme } from '@/hooks/useTheme';
-import { UserMultiSelect } from '@/components/ui/user-multiselect';
+import { UserPicker } from '@/components/ui/UserPicker';
 import { userAPI } from '@/lib/api';
 
 interface Ticket {
@@ -112,6 +112,11 @@ export function BoardDetail() {
 
   const [allUsers, setAllUsers] = useState<any[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
+
+  // Search/filter state
+  const [priority, setPriority] = useState<string>('ALL');
+  const [status, setStatus] = useState<string>('ALL');
+  const [assignees, setAssignees] = useState<string[]>([]);
 
   const themeContext = useTheme();
 
@@ -442,6 +447,25 @@ export function BoardDetail() {
     }
   };
 
+  function filterTickets(tickets: Ticket[]): Ticket[] {
+    return tickets.filter((ticket) => {
+      // Priority
+      const matchesPriority = priority === 'ALL' || ticket.priority === priority;
+
+      // Status (column name)
+      const matchesStatus =
+        status === 'ALL' ||
+        board?.columns.find((col) => col.id === ticket.columnId)?.name === status ||
+        ticket.status === status;
+
+      // Assignee(s)
+      const matchesAssignee =
+        assignees.length === 0 || (ticket.assignee && assignees.includes(ticket.assignee.id));
+
+      return matchesPriority && matchesStatus && matchesAssignee;
+    });
+  }
+
   if (loading) {
     return <div className="flex items-center justify-center h-64">Loading...</div>;
   }
@@ -462,8 +486,8 @@ export function BoardDetail() {
   return (
     <TooltipProvider>
       <div className="w-full px-0 md:px-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center justify-between">
+          <div className="flex flex-wrap items-center gap-4 mb-4">
             <div>
               <h1 className="text-3xl font-bold">{board.name}</h1>
               <p className="text-gray-500">{board.description}</p>
@@ -471,8 +495,70 @@ export function BoardDetail() {
             <Button variant="ghost" size="sm" onClick={handleEditBoard}>
               <Edit className="h-4 w-4" />
             </Button>
+
+            {/* Filters */}
+            <div className="flex flex-wrap gap-4 items-end mb-2">
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="priority-filter" className="text-xs">
+                  Priority
+                </Label>
+                <Select value={priority} onValueChange={setPriority}>
+                  <SelectTrigger id="priority-filter" className="w-30 text-xs">
+                    <SelectValue placeholder="All priorities" />
+                  </SelectTrigger>
+                  <SelectContent className="text-xs">
+                    <SelectItem value="ALL" className="text-xs">
+                      All
+                    </SelectItem>
+                    <SelectItem value="LOW" className="text-xs">
+                      Low
+                    </SelectItem>
+                    <SelectItem value="MEDIUM" className="text-xs">
+                      Medium
+                    </SelectItem>
+                    <SelectItem value="HIGH" className="text-xs">
+                      High
+                    </SelectItem>
+                    <SelectItem value="URGENT" className="text-xs">
+                      Urgent
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="status-filter" className="text-xs">
+                  Status
+                </Label>
+                <Select value={status} onValueChange={setStatus}>
+                  <SelectTrigger id="status-filter" className="w-40 text-xs">
+                    <SelectValue placeholder="All statuses" />
+                  </SelectTrigger>
+                  <SelectContent className="text-xs">
+                    <SelectItem value="ALL" className="text-xs">
+                      All
+                    </SelectItem>
+                    {board.columns.map((col) => (
+                      <SelectItem key={col.name} value={col.name} className="text-xs">
+                        {col.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex flex-col gap-1 min-w-[150px]">
+                <UserPicker
+                  users={board.members || []}
+                  value={assignees}
+                  onChange={setAssignees}
+                  label="Assignee(s)"
+                  labelClassList="text-xs"
+                  disabled={loadingUsers}
+                />
+              </div>
+            </div>
           </div>
-          <div className="flex gap-2">
+
+          <div className="flex flex-wrap gap-2">
             {board.columns.length < 6 && (
               <Button variant="outline" onClick={() => setCreatingColumn(true)}>
                 <Plus className="h-4 w-4 mr-2" />
@@ -553,7 +639,7 @@ export function BoardDetail() {
                               {...provided.droppableProps}
                               className={`space-y-4 min-h-[200px] ${themeContext.theme === 'dark' ? 'bg-card' : 'bg-gray-50'} p-4 rounded-lg ${snapshot.isDraggingOver ? 'ring-2 ring-primary' : ''}`}
                             >
-                              {column.tickets.map((ticket, idx) => (
+                              {filterTickets(column.tickets).map((ticket, idx) => (
                                 <Draggable key={ticket.id} draggableId={ticket.id} index={idx}>
                                   {(provided, snapshot) => (
                                     <div
@@ -803,7 +889,7 @@ export function BoardDetail() {
                 />
               </div>
               <div className="space-y-2">
-                <UserMultiSelect
+                <UserPicker
                   users={allUsers}
                   value={editBoardData.memberIds}
                   onChange={(ids) => setEditBoardData((d) => ({ ...d, memberIds: ids }))}

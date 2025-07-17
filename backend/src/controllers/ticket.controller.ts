@@ -135,17 +135,38 @@ export const getTickets = async (req: Request, res: Response): Promise<void> => 
     const { boardId } = req.params;
     const userId = (req as any).user.id;
 
-    const tickets = await prisma.ticket.findMany({
-      where: {
-        boardId,
-        board: {
-          members: {
-            some: {
-              id: userId,
-            },
+    const { q, priority, status, assigneeId } = req.query;
+
+    // Build dynamic where clause
+    const where: any = {
+      boardId,
+      board: {
+        members: {
+          some: {
+            id: userId,
           },
         },
       },
+    };
+
+    if (typeof q === 'string' && q.trim() !== '') {
+      where.OR = [
+        { title: { contains: q, mode: 'insensitive' } },
+        { description: { contains: q, mode: 'insensitive' } },
+      ];
+    }
+    if (typeof priority === 'string' && priority) {
+      where.priority = priority;
+    }
+    if (typeof status === 'string' && status) {
+      where.status = status;
+    }
+    if (typeof assigneeId === 'string' && assigneeId) {
+      where.assigneeId = assigneeId;
+    }
+
+    const tickets = await prisma.ticket.findMany({
+      where,
       include: {
         assignee: true,
         watchers: true,
