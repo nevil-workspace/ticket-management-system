@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ConfirmationModal } from '@/components/ui/confirmation-modal';
-import { Edit, Trash2 } from 'lucide-react';
+import { Edit, Trash2, MoreVertical } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -22,6 +22,12 @@ import { UserMultiSelect } from '@/components/ui/user-multiselect';
 import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu';
 
 interface User {
   id: string;
@@ -157,7 +163,8 @@ export function Boards() {
             key={board.id}
             className="rounded-lg border bg-card p-4 hover:shadow-md transition-shadow relative group"
           >
-            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            {/* Desktop hover actions */}
+            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity hidden md:block">
               <div className="flex gap-1">
                 <Button
                   variant="ghost"
@@ -181,6 +188,36 @@ export function Boards() {
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
+            </div>
+
+            {/* Mobile 3-dot menu */}
+            <div className="absolute top-2 right-2 md:hidden">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <MoreVertical className="w-5 h-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleEditBoard(board);
+                    }}
+                  >
+                    <Edit className="w-4 h-4 mr-2" /> Edit
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setBoardToDelete(board);
+                    }}
+                    className="text-red-600 focus:text-red-700"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" /> Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
 
             <div className="cursor-pointer" onClick={() => navigate(`/boards/${board.id}`)}>

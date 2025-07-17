@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ConfirmationModal } from '@/components/ui/confirmation-modal';
-import { Edit, Trash2, Plus, GripVertical } from 'lucide-react';
+import { Edit, Trash2, Plus, GripVertical, MoreVertical } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -28,6 +28,12 @@ import { showToast } from '@/lib/toast';
 import { useTheme } from '@/hooks/useTheme';
 import { UserPicker } from '@/components/ui/UserPicker';
 import { userAPI } from '@/lib/api';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu';
 
 interface Ticket {
   id: string;
@@ -489,7 +495,9 @@ export function BoardDetail() {
         <div className="flex flex-wrap items-center justify-between">
           <div className="flex flex-wrap items-center gap-4 mb-4">
             <div>
-              <h1 className="text-3xl font-bold">{board.name}</h1>
+              <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold">
+                {board.name}
+              </h1>
               <p className="text-gray-500">{board.description}</p>
             </div>
             <Button variant="ghost" size="sm" onClick={handleEditBoard}>
@@ -649,7 +657,8 @@ export function BoardDetail() {
                                       className={`rounded-lg border bg-card p-4 space-y-2 cursor-pointer hover:shadow-md transition-shadow relative group ${snapshot.isDragging ? 'opacity-70' : ''}`}
                                       onClick={() => navigate(`/tickets/${ticket.id}`)}
                                     >
-                                      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                      {/* Desktop hover actions */}
+                                      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity hidden md:block">
                                         <div className="flex gap-1">
                                           <Button
                                             variant="ghost"
@@ -674,8 +683,37 @@ export function BoardDetail() {
                                           </Button>
                                         </div>
                                       </div>
+                                      {/* Mobile 3-dot menu */}
+                                      <div className="absolute top-2 right-2 md:hidden">
+                                        <DropdownMenu>
+                                          <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost" size="icon">
+                                              <MoreVertical className="w-5 h-5" />
+                                            </Button>
+                                          </DropdownMenuTrigger>
+                                          <DropdownMenuContent align="end">
+                                            <DropdownMenuItem
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleEditTicket(ticket);
+                                              }}
+                                            >
+                                              <Edit className="w-4 h-4 mr-2" /> Edit
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setTicketToDelete(ticket);
+                                              }}
+                                              className="text-red-600 focus:text-red-700"
+                                            >
+                                              <Trash2 className="w-4 h-4 mr-2" /> Delete
+                                            </DropdownMenuItem>
+                                          </DropdownMenuContent>
+                                        </DropdownMenu>
+                                      </div>
                                       <h3 className="font-medium pr-12">{ticket.title}</h3>
-                                      <p className="text-sm text-muted-foreground">
+                                      <p className="text-sm text-muted-foreground line-clamp-4">
                                         {ticket.description}
                                       </p>
                                       <span className="text-xs text-muted-foreground">

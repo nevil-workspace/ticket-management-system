@@ -8,6 +8,7 @@ import {
   addComment,
   editComment,
   deleteComment,
+  searchTickets,
 } from '../controllers/ticket.controller';
 import { authenticateToken, isBoardMember } from '../middleware/auth';
 import { body } from 'express-validator';
@@ -30,6 +31,7 @@ router.post(
 );
 
 router.get('/board/:boardId', isBoardMember, getTickets);
+router.get('/search', searchTickets);
 router.get('/:ticketId', getTicket);
 
 router.put(

@@ -512,3 +512,40 @@ export const deleteComment = async (req: Request, res: Response): Promise<void> 
     res.status(500).json({ message: 'Error deleting comment' });
   }
 };
+
+export const searchTickets = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = (req as any).user.id;
+    const { q } = req.query;
+    const where: any = {
+      board: {
+        members: {
+          some: { id: userId },
+        },
+      },
+    };
+    if (typeof q === 'string' && q.trim() !== '') {
+      where.OR = [
+        { title: { contains: q, mode: 'insensitive' } },
+        { description: { contains: q, mode: 'insensitive' } },
+      ];
+    }
+    const tickets = await prisma.ticket.findMany({
+      where,
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        priority: true,
+        status: true,
+        assignee: { select: { id: true, name: true } },
+        boardId: true,
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+    });
+    res.json(tickets);
+  } catch (error) {
+    res.status(500).json({ message: 'Error searching tickets' });
+  }
+};

@@ -138,12 +138,15 @@ export const boardAPI = {
 };
 
 export const ticketAPI = {
-  getTickets: (boardId: string, filters?: {
-    q?: string;
-    priority?: string;
-    status?: string;
-    assigneeId?: string;
-  }) => {
+  getTickets: (
+    boardId: string,
+    filters?: {
+      q?: string;
+      priority?: string;
+      status?: string;
+      assigneeId?: string;
+    },
+  ) => {
     let url = `/tickets/board/${boardId}`;
     if (filters) {
       const params = new URLSearchParams();
@@ -186,6 +189,7 @@ export const ticketAPI = {
     apiService.put<any>(`/tickets/${ticketId}/comments/${commentId}`, data),
   deleteComment: (ticketId: string, commentId: string) =>
     apiService.delete<{ message: string }>(`/tickets/${ticketId}/comments/${commentId}`),
+  searchTickets: (q: string) => apiService.get<any[]>(`/tickets/search?q=${encodeURIComponent(q)}`),
 };
 
 export const userAPI = {

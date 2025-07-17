@@ -1,4 +1,4 @@
-import { Moon, Sun, LogOut, Pencil } from 'lucide-react';
+import { Moon, Sun, LogOut, Pencil, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth.tsx';
@@ -13,6 +13,34 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useEffect, useCallback } from 'react';
+import { ticketAPI } from '@/lib/api';
+import {
+  CommandDialog,
+  CommandInput,
+  CommandList,
+  CommandItem,
+  CommandEmpty,
+} from '@/components/ui/command';
+import { Input } from '@/components/ui/input';
+import { showToast } from '@/lib/toast';
+
+interface User {
+  id: string;
+  name: string;
+}
+
+interface Ticket {
+  id: string;
+  title: string;
+  description: string;
+  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+  assignee?: User;
+  boardId: string;
+}
 
 export function Header() {
   const navigate = useNavigate();
@@ -20,22 +48,184 @@ export function Header() {
   const { theme, toggleTheme } = useTheme();
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
 
+  const [commandOpen, setCommandOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const [searchResults, setSearchResults] = useState<Ticket[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+
+  useEffect(() => {
+    const trimmedSearch = search.trim();
+    if (trimmedSearch === '') {
+      setSearchResults([]);
+      return;
+    }
+
+    const handler = setTimeout(() => {
+      setSearchLoading(true);
+
+      ticketAPI
+        .searchTickets(trimmedSearch)
+        .then((tickets) => {
+          setSearchResults([...tickets]);
+        })
+        .catch((error) => {
+          console.error(error);
+          showToast.error('Something went wrong!');
+        })
+        .finally(() => {
+          setSearchLoading(false);
+        });
+    }, 500);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [search]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setCommandOpen(true);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  const handleSelect = useCallback((ticketId: string) => {
+    window.open(`/tickets/${ticketId}`, '_blank');
+    setCommandOpen(false);
+  }, []);
+
+  // Keyboard shortcut label
+  // @ts-ignore
+  const isMac = navigator.userAgentData?.platform?.toLowerCase().includes('mac') ?? false;
+  const shortcutLabel = isMac ? (
+    <>
+      <span
+        className={`font-mono text-xs px-1.5 ${theme === 'dark' ? 'bg-muted' : 'bg-primary'} py-0.5 rounded mr-1`}
+      >
+        ⌘
+      </span>
+      <span
+        className={`font-mono text-xs ${theme === 'dark' ? 'bg-muted' : 'bg-primary'} px-1.5 py-0.5 rounded`}
+      >
+        K
+      </span>
+    </>
+  ) : (
+    <>
+      <span
+        className={`font-mono text-xs px-1.5 ${theme === 'dark' ? 'bg-muted' : 'bg-primary'} py-0.5 rounded mr-1`}
+      >
+        Ctrl
+      </span>
+      <span
+        className={`font-mono text-xs ${theme === 'dark' ? 'bg-muted' : 'bg-primary'} px-1.5 py-0.5 rounded`}
+      >
+        K
+      </span>
+    </>
+  );
+
   return (
     <header className="border-b">
       <div className="w-full px-6 flex h-16 items-center justify-between">
-        <div className="flex items-center gap-6">
-          <h1 className="text-xl font-bold cursor-pointer" onClick={() => navigate('/')}>
+        <div className="flex items-center gap-2">
+          <h1
+            className="text-xl sm:text-2xl font-bold cursor-pointer"
+            onClick={() => navigate('/')}
+          >
             Ticket Management
           </h1>
           {user && (
-            <nav className="flex items-center gap-4">
+            <nav className="flex items-center">
               <Button variant="ghost" onClick={() => navigate('/boards')}>
                 Boards
               </Button>
             </nav>
           )}
         </div>
-        <div className="flex items-center gap-4">
+        <div
+          className={`flex items-center ${user ? 'justify-center' : 'justify-end'} gap-4 min-w-[120px]`}
+        >
+          {user && (
+            <>
+              <div className="relative w-72 hidden md:block">
+                <Button
+                  type="button"
+                  aria-label="Search tickets (Ctrl+K)"
+                  className="w-full"
+                  onClick={() => setCommandOpen(true)}
+                  tabIndex={0}
+                  style={{ background: 'none', border: 'none', padding: 0, margin: 0 }}
+                >
+                  <div className="flex items-center w-full">
+                    <Input
+                      readOnly
+                      tabIndex={-1}
+                      className="pr-24 cursor-pointer select-none"
+                      placeholder="Search tickets..."
+                    />
+                    <span className="absolute right-2 flex items-center gap-1">
+                      {shortcutLabel}
+                    </span>
+                  </div>
+                </Button>
+              </div>
+
+              <Button
+                type="button"
+                aria-label="Search tickets"
+                className="md:hidden items-center flex"
+                variant="ghost"
+                size="icon"
+                onClick={() => setCommandOpen(true)}
+              >
+                <Search className="w-5 h-5" />
+              </Button>
+
+              <CommandDialog
+                open={commandOpen}
+                onOpenChange={setCommandOpen}
+                title="Search Tickets"
+                description="Search tickets by title or description"
+              >
+                <CommandInput
+                  placeholder="Search tickets..."
+                  value={search}
+                  onValueChange={setSearch}
+                  autoFocus
+                />
+                <CommandList>
+                  {searchLoading && (
+                    <div className="p-4 text-center text-muted-foreground text-sm">
+                      Searching...
+                    </div>
+                  )}
+                  {!searchLoading && search && searchResults.length === 0 && (
+                    <CommandEmpty>No tickets found.</CommandEmpty>
+                  )}
+                  {searchResults.map((ticket) => (
+                    <CommandItem
+                      key={ticket.id}
+                      onSelect={() => handleSelect(ticket.id)}
+                      value={ticket.title + ' ' + ticket.description}
+                      className="cursor-pointer"
+                    >
+                      <div className="flex flex-col">
+                        <span className="font-medium">{ticket.title}</span>
+                        <span className="text-xs text-muted-foreground line-clamp-1">
+                          {ticket.description}
+                        </span>
+                      </div>
+                    </CommandItem>
+                  ))}
+                </CommandList>
+              </CommandDialog>
+            </>
+          )}
           <Button variant="ghost" onClick={toggleTheme} aria-label="Toggle theme">
             {theme === 'dark' ? (
               <Moon className="absolute h-[1.2rem] w-[1.2rem] scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0" />
@@ -43,7 +233,7 @@ export function Header() {
               <Sun className="h-[1.2rem] w-[1.2rem] scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90" />
             )}
           </Button>
-          {user ? (
+          {user && (
             <>
               <DropdownMenu>
                 <DropdownMenuTrigger>
@@ -92,13 +282,6 @@ export function Header() {
               </DropdownMenu>
 
               <EditProfileDialog open={isEditProfileOpen} onOpenChange={setIsEditProfileOpen} />
-            </>
-          ) : (
-            <>
-              <Button variant="ghost" onClick={() => navigate('/login')}>
-                Login
-              </Button>
-              <Button onClick={() => navigate('/register')}>Register</Button>
             </>
           )}
         </div>
