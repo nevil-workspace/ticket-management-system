@@ -1,4 +1,4 @@
-import * as React from 'react';
+import { useState } from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   Command,
@@ -49,8 +49,8 @@ export function UserPicker({
   labelClassList,
   disabled,
 }: UserPickerProps) {
-  const [open, setOpen] = React.useState(false);
-  const [search, setSearch] = React.useState('');
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
 
   const filtered = users.filter(
     (u) =>
