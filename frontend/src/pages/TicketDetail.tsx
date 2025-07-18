@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ticketAPI, boardAPI } from '@/lib/api';
 import { Button } from '@/components/ui/button';
@@ -97,6 +97,11 @@ export function TicketDetail() {
 
   const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null);
 
+  // @ts-ignore
+  const isMac = navigator.userAgentData?.platform?.toLowerCase().includes('mac') ?? false;
+  const commentFormRef = useRef<HTMLFormElement | null>(null);
+  const commentAreaRef = useRef<HTMLTextAreaElement | null>(null);
+
   const {
     handleSubmit,
     control,
@@ -148,6 +153,24 @@ export function TicketDetail() {
       fetchTicket();
     }
   }, [ticketId]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isSubmitShortcut =
+        (isMac && e.metaKey && e.key === 'Enter') || (!isMac && e.ctrlKey && e.key === 'Enter');
+
+      if (isSubmitShortcut) {
+        const active = document.activeElement;
+        if (active === commentAreaRef.current) {
+          e.preventDefault();
+          commentFormRef.current?.requestSubmit();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const onEdit = () => setEditMode(true);
   const onCancelEdit = () => {
@@ -401,6 +424,34 @@ export function TicketDetail() {
           <TabsTrigger value="history">History</TabsTrigger>
         </TabsList>
         <TabsContent value="comments">
+          <form onSubmit={handleCommentSubmit} className="space-y-2 my-4" ref={commentFormRef}>
+            <Label htmlFor="comment" className="text-sm font-medium">
+              Add a comment
+            </Label>
+            <Textarea
+              id="comment"
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              rows={3}
+              ref={commentAreaRef}
+              placeholder="Write your comment..."
+              disabled={addingComment}
+              required
+            />
+            <div className="flex justify-between items-center">
+              <Button type="submit" disabled={addingComment || !comment.trim()}>
+                {addingComment ? 'Posting...' : 'Post'}
+              </Button>
+              <div className="text-xs text-muted-foreground">
+                Press{' '}
+                <kbd className="rounded border bg-muted px-1 py-0.5 text-xs">
+                  {isMac ? '⌘' : 'Ctrl'}
+                </kbd>{' '}
+                + <kbd className="rounded border bg-muted px-1 py-0.5 text-xs">Enter</kbd> to post
+              </div>
+            </div>
+          </form>
+
           <h2 className="text-xl font-semibold">Comments</h2>
           <div className="space-y-4">
             {ticket.comments.length === 0 && <div className="text-gray-400">No comments yet.</div>}
@@ -486,23 +537,6 @@ export function TicketDetail() {
                 </div>
               ))}
           </div>
-          <form onSubmit={handleCommentSubmit} className="space-y-2 mt-4">
-            <Label htmlFor="comment" className="text-sm font-medium">
-              Add a comment
-            </Label>
-            <Textarea
-              id="comment"
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-              rows={3}
-              placeholder="Write your comment..."
-              disabled={addingComment}
-              required
-            />
-            <Button type="submit" disabled={addingComment || !comment.trim()}>
-              {addingComment ? 'Posting...' : 'Post'}
-            </Button>
-          </form>
         </TabsContent>
         <TabsContent value="history">
           <h2 className="text-xl font-semibold mb-2">History</h2>
