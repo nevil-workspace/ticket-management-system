@@ -237,16 +237,23 @@ export function TicketDetail() {
   const history: TicketHistory[] = ticket.history || [];
 
   return (
-    <div className="max-w-2xl mx-auto py-8 space-y-8">
-      <div className="flex items-center gap-2 mb-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate(`/boards/${ticket.boardId}`)}>
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
-        <span className="text-lg font-medium">Back to Board</span>
+    <div className="max-w-2xl mx-auto py-8 space-y-8 px-2 sm:px-4 w-full">
+      <div className="flex items-center justify-between gap-2 mb-4">
+        <div className="flex justify-center items-center">
+          <Button variant="ghost" size="icon" onClick={() => navigate(`/boards/${ticket.boardId}`)}>
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <span className="text-base sm:text-lg font-medium">Back to Board</span>
+        </div>
+        {!editMode && (
+          <Button variant="outline" size="sm" onClick={onEdit} className="w-auto block md:hidden">
+            Edit
+          </Button>
+        )}
       </div>
       <div className="space-y-2">
         {editMode ? (
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 w-full">
             <div className="space-y-2">
               <Label htmlFor="title" className="text-sm font-medium">
                 Title
@@ -260,8 +267,8 @@ export function TicketDetail() {
                     type="text"
                     {...field}
                     required
-                    disabled={isSubmitting}
                     aria-invalid={!!errors.title}
+                    className="w-full"
                   />
                 )}
               />
@@ -279,8 +286,8 @@ export function TicketDetail() {
                     id="description"
                     {...field}
                     rows={4}
-                    disabled={isSubmitting}
                     aria-invalid={!!errors.description}
+                    className="w-full"
                   />
                 )}
               />
@@ -316,7 +323,7 @@ export function TicketDetail() {
               {errors.priority && <p className="text-xs text-red-500">{errors.priority.message}</p>}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="assignee" className="text-sm font-medium">
+              <Label htmlFor="assigneeId" className="text-sm font-medium">
                 Assignee
               </Label>
               <Controller
@@ -346,30 +353,38 @@ export function TicketDetail() {
                 <p className="text-xs text-red-500">{errors.assigneeId.message}</p>
               )}
             </div>
-            <div className="flex gap-4">
+            <div className="flex flex-col gap-2 sm:flex-row sm:gap-4">
               <Button
                 type="button"
                 variant="outline"
                 onClick={onCancelEdit}
-                disabled={isSubmitting}
+                className="w-full sm:w-auto"
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? 'Saving...' : 'Save Changes'}
+              <Button type="submit" className="w-full sm:w-auto">
+                Save
               </Button>
             </div>
           </form>
         ) : (
           <>
-            <div className="flex items-center gap-2">
-              <h1 className="text-3xl font-bold">{ticket.title}</h1>
-              <Button variant="outline" size="sm" onClick={onEdit}>
+            <div className="flex gap-2 sm:flex-row sm:gap-4 items-start sm:items-center">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold break-words">
+                {ticket.title}
+              </h1>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onEdit}
+                className="w-auto hidden md:block"
+              >
                 Edit
               </Button>
             </div>
-            <p className="text-gray-500">{ticket.description}</p>
-            <div className="flex gap-4 text-sm text-muted-foreground">
+
+            <p className="text-gray-500 break-words">{ticket.description}</p>
+            <div className="flex flex-col gap-1 sm:flex-row sm:gap-4 text-sm text-muted-foreground">
               <span className="font-bold">Priority: {ticket.priority}</span>
               <span className="font-bold">Status: {ticket.status}</span>
               <span className="font-bold">Assignee: {ticket.assignee?.name || 'Unassigned'}</span>
@@ -493,34 +508,32 @@ export function TicketDetail() {
           <h2 className="text-xl font-semibold mb-2">History</h2>
           <div className="space-y-4">
             {history.length === 0 && <div className="text-gray-400">No history yet.</div>}
-            {history
-              // .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-              .map((h) => {
-                const message = h.message || getHistoryMessage(h);
-                return (
-                  <div key={h.id} className="border rounded-lg p-3 bg-card">
-                    <div className="flex items-center gap-2 mb-1">
-                      {h.user && h.user.profileImage && (
-                        <img
-                          src={h.user.profileImage}
-                          alt={h.user.name}
-                          className="w-5 h-5 rounded-full"
-                        />
-                      )}
-                      <span className="text-sm">{message}</span>
-                      <span className="text-xs text-gray-400">
-                        {new Date(h.createdAt).toLocaleString()}
-                      </span>
-                    </div>
-                    {h.oldValue && h.newValue && (
-                      <div className="text-xs text-muted-foreground mt-1">
-                        <span className="font-bold">From:</span> {h.oldValue ?? '—'}{' '}
-                        <span className="font-bold">To:</span> {h.newValue ?? '—'}
-                      </div>
+            {history.map((h) => {
+              const message = h.message || getHistoryMessage(h);
+              return (
+                <div key={h.id} className="border rounded-lg p-3 bg-card">
+                  <div className="flex items-center gap-2 mb-1">
+                    {h.user && h.user.profileImage && (
+                      <img
+                        src={h.user.profileImage}
+                        alt={h.user.name}
+                        className="w-5 h-5 rounded-full"
+                      />
                     )}
+                    <span className="text-sm">{message}</span>
+                    <span className="text-xs text-gray-400">
+                      {new Date(h.createdAt).toLocaleString()}
+                    </span>
                   </div>
-                );
-              })}
+                  {h.oldValue && h.newValue && (
+                    <div className="text-xs text-muted-foreground mt-1">
+                      <span className="font-bold">From:</span> {h.oldValue ?? '—'}{' '}
+                      <span className="font-bold">To:</span> {h.newValue ?? '—'}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </TabsContent>
       </Tabs>

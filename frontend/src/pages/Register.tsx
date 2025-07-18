@@ -38,12 +38,12 @@ export function Register() {
   };
 
   return (
-    <div className="mx-auto max-w-md space-y-6">
+    <div className="mx-auto max-w-md w-full space-y-6 px-2 sm:px-4">
       <div className="space-y-2 text-center">
-        <h1 className="text-xl sm:text-2xl font-bold">Create an Account</h1>
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">Create an Account</h1>
         <p className="text-gray-500">Enter your details to create your account</p>
       </div>
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 w-full">
         <div className="space-y-2">
           <Label htmlFor="name" className="text-sm font-medium">
             Name
@@ -59,6 +59,7 @@ export function Register() {
                 required
                 disabled={isSubmitting}
                 aria-invalid={!!errors.name}
+                className="w-full"
               />
             )}
           />
@@ -79,6 +80,7 @@ export function Register() {
                 required
                 disabled={isSubmitting}
                 aria-invalid={!!errors.email}
+                className="w-full"
               />
             )}
           />
@@ -99,6 +101,7 @@ export function Register() {
                 required
                 disabled={isSubmitting}
                 aria-invalid={!!errors.password}
+                className="w-full"
               />
             )}
           />

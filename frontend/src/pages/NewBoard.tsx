@@ -64,12 +64,12 @@ export function NewBoard() {
   };
 
   return (
-    <div className="mx-auto max-w-md space-y-6">
+    <div className="mx-auto max-w-md w-full space-y-6 px-2 sm:px-4">
       <div className="space-y-2">
-        <h1 className="text-3xl font-bold">Create New Board</h1>
+        <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold">Create New Board</h1>
         <p className="text-gray-500">Create a new board to organize your tickets</p>
       </div>
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 w-full">
         <div className="space-y-2">
           <Label htmlFor="name" className="text-sm font-medium">
             Name
@@ -85,6 +85,7 @@ export function NewBoard() {
                 required
                 disabled={isSubmitting}
                 aria-invalid={!!errors.name}
+                className="w-full"
               />
             )}
           />
@@ -104,6 +105,7 @@ export function NewBoard() {
                 rows={4}
                 disabled={isSubmitting}
                 aria-invalid={!!errors.description}
+                className="w-full"
               />
             )}
           />
@@ -127,16 +129,17 @@ export function NewBoard() {
           />
           {errors.memberIds && <p className="text-xs text-red-500">{errors.memberIds.message}</p>}
         </div>
-        <div className="flex gap-4">
+        <div className="flex flex-col gap-2 sm:flex-row sm:gap-4">
           <Button
             type="button"
             variant="outline"
             onClick={() => navigate('/boards')}
             disabled={isSubmitting}
+            className="w-full sm:w-auto"
           >
             Cancel
           </Button>
-          <Button type="submit" disabled={isSubmitting}>
+          <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
             {isSubmitting ? 'Creating...' : 'Create Board'}
           </Button>
         </div>

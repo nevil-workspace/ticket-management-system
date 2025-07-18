@@ -38,12 +38,12 @@ export function Login() {
   };
 
   return (
-    <div className="mx-auto max-w-md space-y-6">
+    <div className="mx-auto max-w-md w-full space-y-6 px-2 sm:px-4">
       <div className="space-y-2 text-center">
-        <h1 className="text-xl sm:text-2xl font-bold">Login</h1>
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">Login</h1>
         <p className="text-gray-500">Enter your credentials to access your account</p>
       </div>
-      <div className="flex flex-col items-center space-y-4">
+      <div className="flex flex-col items-center space-y-4 w-full">
         <GoogleLogin
           onSuccess={async (credentialResponse) => {
             if (credentialResponse.credential) {
@@ -60,7 +60,7 @@ export function Login() {
         />
         <span className="text-gray-400 text-xs">or</span>
       </div>
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 w-full">
         <div className="space-y-2">
           <Label htmlFor="email" className="text-sm font-medium">
             Email
@@ -76,6 +76,7 @@ export function Login() {
                 required
                 disabled={isSubmitting}
                 aria-invalid={!!errors.email}
+                className="w-full"
               />
             )}
           />
@@ -96,6 +97,7 @@ export function Login() {
                 required
                 disabled={isSubmitting}
                 aria-invalid={!!errors.password}
+                className="w-full"
               />
             )}
           />
