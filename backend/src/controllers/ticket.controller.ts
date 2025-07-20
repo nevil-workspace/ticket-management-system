@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../index';
 import { Prisma } from '@prisma/client';
+import { io } from '../index';
 
 // Utility to generate a custom message for ticket history
 function getHistoryMessage({
@@ -353,6 +354,12 @@ export const updateTicket = async (req: Request, res: Response): Promise<void> =
       await prisma.ticketHistory.createMany({ data: historyEntries });
     }
 
+    await emitTicketUpdate(
+      ticketId,
+      'ticket:updated',
+      userId,
+      `Ticket updated: ${updatedTicket.title}`,
+    );
     res.json(updatedTicket);
   } catch (error) {
     res.status(500).json({ message: 'Error updating ticket' });
@@ -439,6 +446,12 @@ export const addComment = async (req: Request, res: Response): Promise<void> => 
       },
     });
 
+    await emitTicketUpdate(
+      ticketId,
+      'ticket:comment',
+      userId,
+      `New comment on ticket: ${ticket.title}`,
+    );
     res.status(201).json(comment);
   } catch (error) {
     res.status(500).json({ message: 'Error adding comment' });
@@ -451,19 +464,23 @@ export const editComment = async (req: Request, res: Response): Promise<void> =>
     const { content } = req.body;
     const userId = (req as any).user.id;
     const comment = await prisma.comment.findUnique({ where: { id: commentId } });
+
     if (!comment || comment.ticketId !== ticketId) {
       res.status(404).json({ message: 'Comment not found' });
       return;
     }
+
     if (comment.userId !== userId) {
       res.status(403).json({ message: 'Not allowed' });
       return;
     }
+
     const updated = await prisma.comment.update({
       where: { id: commentId },
       data: { content },
       include: { user: true },
     });
+
     const user = (await prisma.user.findUnique({ where: { id: userId } })) || undefined;
     await prisma.ticketHistory.create({
       data: {
@@ -476,6 +493,7 @@ export const editComment = async (req: Request, res: Response): Promise<void> =>
         message: getHistoryMessage({ field: 'COMMENT_EDITED', user }),
       },
     });
+
     res.json(updated);
   } catch (error) {
     res.status(500).json({ message: 'Error editing comment' });
@@ -549,3 +567,119 @@ export const searchTickets = async (req: Request, res: Response): Promise<void> 
     res.status(500).json({ message: 'Error searching tickets' });
   }
 };
+
+export const addWatcher = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { ticketId } = req.params;
+    const userId = (req as any).user.id;
+    const ticket = await prisma.ticket.findUnique({
+      where: { id: ticketId },
+      include: { board: { include: { members: true } }, watchers: true },
+    });
+
+    if (!ticket) {
+      res.status(404).json({ message: 'Ticket not found' });
+      return;
+    }
+
+    // Only board members can watch
+    if (!ticket.board.members.some((m) => m.id === userId)) {
+      res.status(403).json({ message: 'Not a board member' });
+      return;
+    }
+
+    const updated = await prisma.ticket.update({
+      where: { id: ticketId },
+      data: { watchers: { connect: { id: userId } } },
+      include: { watchers: true },
+    });
+
+    updated.watchers.forEach((w) => {
+      io.to(w.id).emit('ticket:watchers-updated', { ticketId, watchers: updated.watchers });
+    });
+
+    res.json(updated.watchers);
+  } catch (error) {
+    res.status(500).json({ message: 'Error adding watcher' });
+  }
+};
+
+export const removeWatcher = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { ticketId } = req.params;
+    const userId = (req as any).user.id;
+    const ticket = await prisma.ticket.findUnique({
+      where: { id: ticketId },
+      include: { board: { include: { members: true } }, watchers: true },
+    });
+    if (!ticket) {
+      res.status(404).json({ message: 'Ticket not found' });
+      return;
+    }
+    // Only board members can unwatch
+    if (!ticket.board.members.some((m) => m.id === userId)) {
+      res.status(403).json({ message: 'Not a board member' });
+      return;
+    }
+    // Remove watcher
+    const updated = await prisma.ticket.update({
+      where: { id: ticketId },
+      data: { watchers: { disconnect: { id: userId } } },
+      include: { watchers: true },
+    });
+    // Emit real-time event to all watchers
+    updated.watchers.forEach((w) => {
+      io.to(w.id).emit('ticket:watchers-updated', { ticketId, watchers: updated.watchers });
+    });
+    res.json(updated.watchers);
+  } catch (error) {
+    res.status(500).json({ message: 'Error removing watcher' });
+  }
+};
+
+// Helper to emit ticket update to all watchers and persist notifications
+async function emitTicketUpdate(
+  ticketId: string,
+  event: string,
+  actorId?: string,
+  message?: string,
+) {
+  const ticket = await prisma.ticket.findUnique({
+    where: { id: ticketId },
+    include: { watchers: true },
+  });
+  if (ticket) {
+    const notifications = [];
+    for (const w of ticket.watchers) {
+      if (actorId && w.id === actorId) continue; // Skip actor
+      notifications.push({
+        userId: w.id,
+        type: event,
+        message: message || 'Ticket updated',
+        ticketId,
+      });
+    }
+
+    if (notifications.length > 0) {
+      await prisma.notification.createMany({ data: notifications });
+      // Fetch the created notifications with their IDs
+      const createdNotifications = await prisma.notification.findMany({
+        where: {
+          ticketId,
+          type: event,
+          message: message || 'Ticket updated',
+          userId: {
+            in: ticket.watchers.filter((w) => !actorId || w.id !== actorId).map((w) => w.id),
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: notifications.length,
+      });
+
+      // Emit the notification object (with real ID) to each watcher
+      for (const notif of createdNotifications) {
+        io.to(notif.userId).emit(event, notif);
+      }
+    }
+  }
+}

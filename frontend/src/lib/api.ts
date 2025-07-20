@@ -1,4 +1,5 @@
 import axios, { AxiosResponse, AxiosError } from 'axios';
+import { io as socketio } from 'socket.io-client';
 
 // Create axios instance with default config
 const api = axios.create({
@@ -53,7 +54,7 @@ interface ApiError {
 class ApiService {
   // Generic request method
   private async request<T>(
-    method: 'GET' | 'POST' | 'PUT' | 'DELETE',
+    method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH',
     url: string,
     data?: any,
   ): Promise<T> {
@@ -90,6 +91,11 @@ class ApiService {
   // DELETE request
   async delete<T>(url: string): Promise<T> {
     return this.request<T>('DELETE', url);
+  }
+
+  // PATCH request
+  async patch<T>(url: string, data?: any): Promise<T> {
+    return this.request<T>('PATCH', url, data);
   }
 }
 
@@ -190,6 +196,8 @@ export const ticketAPI = {
   deleteComment: (ticketId: string, commentId: string) =>
     apiService.delete<{ message: string }>(`/tickets/${ticketId}/comments/${commentId}`),
   searchTickets: (q: string) => apiService.get<any[]>(`/tickets/search?q=${encodeURIComponent(q)}`),
+  addWatcher: (ticketId: string) => apiService.post<any>(`/tickets/${ticketId}/watchers`),
+  removeWatcher: (ticketId: string) => apiService.delete<any>(`/tickets/${ticketId}/watchers`),
 };
 
 export const userAPI = {
@@ -199,5 +207,22 @@ export const userAPI = {
       headers: { 'Content-Type': 'multipart/form-data' },
     }),
 };
+
+export const notificationAPI = {
+  getNotifications: (page = 1, pageSize = 20) =>
+    apiService.get<any[]>(`/auth/notifications?page=${page}&pageSize=${pageSize}`),
+  markAllRead: () => apiService.patch<{ message: string }>(`/auth/notifications/read`),
+  markRead: (id: string) => apiService.patch<{ message: string }>(`/auth/notifications/${id}/read`),
+};
+
+const getSocketUrl = () => {
+  const socketUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+  return socketUrl;
+};
+
+export const socket = socketio(getSocketUrl(), {
+  autoConnect: false,
+  transports: ['websocket'],
+});
 
 export default apiService;

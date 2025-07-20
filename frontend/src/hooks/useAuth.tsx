@@ -1,5 +1,6 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
 import { authAPI } from '@/lib/api';
+import { socket } from '@/lib/api';
 
 interface User {
   id: string;
@@ -40,6 +41,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     initializeAuth();
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      socket.connect();
+      socket.emit('user:join', user.id);
+    } else {
+      socket.disconnect();
+    }
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [user]);
 
   const login = async (email?: string, password?: string, credential?: string) => {
     try {

@@ -5,6 +5,7 @@ export const showToast = {
     toast.success(message, {
       duration: 3000,
       position: 'top-right',
+      closeButton: true,
     });
   },
 
@@ -26,6 +27,7 @@ export const showToast = {
     toast.info(message, {
       duration: 3000,
       position: 'top-right',
+      closeButton: true,
     });
   },
 };

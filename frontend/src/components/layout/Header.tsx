@@ -1,4 +1,4 @@
-import { Moon, Sun, LogOut, Pencil, Search } from 'lucide-react';
+import { Moon, Sun, LogOut, Pencil, Search, Bell, ArrowUpRight, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth.tsx';
@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useEffect, useCallback } from 'react';
 import { ticketAPI } from '@/lib/api';
+import { socket } from '@/lib/api';
 import {
   CommandDialog,
   CommandInput,
@@ -24,6 +25,8 @@ import {
 } from '@/components/ui/command';
 import { Input } from '@/components/ui/input';
 import { showToast } from '@/lib/toast';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { notificationAPI } from '@/lib/api';
 
 interface User {
   id: string;
@@ -52,6 +55,71 @@ export function Header() {
   const [search, setSearch] = useState('');
   const [searchResults, setSearchResults] = useState<Ticket[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [notifPage, setNotifPage] = useState(1);
+  const [notifHasMore, setNotifHasMore] = useState(true);
+  const [notifLoading, setNotifLoading] = useState(false);
+
+  // Fetch notifications from backend
+  const fetchNotifications = async (page = 1) => {
+    setNotifLoading(true);
+    try {
+      const data = await notificationAPI.getNotifications(page);
+      setNotifications((prev) => {
+        // Deduplicate by id
+        const all = [...prev, ...data];
+        const seen = new Set();
+        return all.filter((n) => {
+          if (seen.has(n.id)) return false;
+          seen.add(n.id);
+          return true;
+        });
+      });
+      setNotifHasMore(data.length === 20);
+    } catch {
+      setNotifHasMore(false);
+    } finally {
+      setNotifLoading(false);
+    }
+  };
+
+  // Fetch on open
+  useEffect(() => {
+    if (notifOpen && notifications.length === 0) {
+      fetchNotifications(1);
+      setNotifPage(1);
+    }
+  }, [notifOpen]);
+
+  // Fetch notifications on mount if user is logged in
+  useEffect(() => {
+    if (user) {
+      fetchNotifications(1);
+      setNotifPage(1);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  const handleTicketUpdate = (notif: any) => {
+    setNotifications((prev) => [notif, ...prev]);
+  };
+  const handleTicketComment = (notif: any) => {
+    setNotifications((prev) => [notif, ...prev]);
+  };
+
+  // Real-time notification merge
+  useEffect(() => {
+    if (!user) return;
+
+    socket.on('ticket:updated', handleTicketUpdate);
+    socket.on('ticket:comment', handleTicketComment);
+
+    return () => {
+      socket.off('ticket:updated', handleTicketUpdate);
+      socket.off('ticket:comment', handleTicketComment);
+    };
+  }, [user]);
 
   useEffect(() => {
     const trimmedSearch = search.trim();
@@ -97,6 +165,8 @@ export function Header() {
     window.open(`/tickets/${ticketId}`, '_blank');
     setCommandOpen(false);
   }, []);
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
   // Keyboard shortcut label
   // @ts-ignore
@@ -226,6 +296,111 @@ export function Header() {
               </CommandDialog>
             </>
           )}
+          {user && (
+            <Popover open={notifOpen} onOpenChange={setNotifOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="ghost" size="icon" aria-label="Notifications" className="relative">
+                  <Bell className="w-5 h-5" />
+                  {unreadCount > 0 && (
+                    <span
+                      className="min-w-[1.25rem] h-5 text-xs flex items-center justify-center rounded-full absolute z-10 border-2 border-background bg-red-500 text-white font-bold shadow"
+                      style={{ transform: 'translate(40%, -40%)' }}
+                    >
+                      {unreadCount}
+                    </span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80 max-h-96 overflow-y-auto p-0" align="end">
+                <div className="p-2 border-b font-semibold">Notifications</div>
+                {notifications.length === 0 ? (
+                  <div className="p-4 text-center text-muted-foreground text-sm">
+                    {notifLoading ? (
+                      <span className="flex items-center justify-center gap-2 text-primary">
+                        <Loader2 className="animate-spin w-4 h-4 opacity-80" />
+                        <span className="text-xs font-medium">Loading notifications...</span>
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">No notifications</span>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    {unreadCount > 0 && (
+                      <Button
+                        variant="ghost"
+                        className="w-full text-left text-red-600 hover:text-red-700"
+                        onClick={async () => {
+                          await notificationAPI.markAllRead();
+                          setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+                        }}
+                      >
+                        Mark all as read
+                      </Button>
+                    )}
+                    <ul className="divide-y">
+                      {notifications.map((notif, idx) => (
+                        <li
+                          key={idx}
+                          className={`p-3 hover:bg-accent cursor-pointer ${!notif.read ? 'font-semibold bg-muted/30' : 'text-muted-foreground'}`}
+                          onClick={async () => {
+                            if (!notif.read) {
+                              await notificationAPI.markRead(notif.id);
+                              setNotifications((prev) =>
+                                prev.map((n) => (n.id === notif.id ? { ...n, read: true } : n)),
+                              );
+                            }
+                          }}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <div className="font-medium">
+                                {notif.title || notif.message || 'Ticket updated'}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {notif.time || ''}
+                              </div>
+                            </div>
+                            {notif.ticketId && (
+                              <Button
+                                className="ml-2 p-1 rounded hover:bg-accent transition"
+                                aria-label="Open ticket"
+                                type="button"
+                                variant="ghost"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  window.open(`/tickets/${notif.ticketId}`, '_blank');
+                                }}
+                              >
+                                <ArrowUpRight className="w-4 h-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                )}
+                {notifHasMore && (
+                  <button
+                    className="w-full p-2 text-center flex items-center justify-center gap-2 disabled:opacity-60 text-primary hover:underline"
+                    onClick={() => {
+                      setNotifPage((p) => {
+                        fetchNotifications(p + 1);
+                        return p + 1;
+                      });
+                    }}
+                    disabled={notifLoading}
+                  >
+                    {notifLoading && <Loader2 className="animate-spin w-4 h-4 opacity-80" />}
+                    <span className="text-xs font-medium">
+                      {notifLoading ? 'Loading...' : 'Load more'}
+                    </span>
+                  </button>
+                )}
+              </PopoverContent>
+            </Popover>
+          )}
           <Button variant="ghost" onClick={toggleTheme} aria-label="Toggle theme">
             {theme === 'dark' ? (
               <Moon className="absolute h-[1.2rem] w-[1.2rem] scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0" />
@@ -237,15 +412,18 @@ export function Header() {
             <>
               <DropdownMenu>
                 <DropdownMenuTrigger>
-                  <img
-                    src={
-                      user.profileImage ??
-                      'https://hips.hearstapps.com/hmg-prod/images/dog-puppy-on-garden-royalty-free-image-1586966191.jpg?crop=0.752xw:1.00xh;0.175xw,0&resize=1200:*'
-                    }
-                    alt={user.name}
-                    className="w-8 h-8 rounded-full object-cover border"
-                    style={{ marginRight: '0.5rem' }}
-                  />
+                  {user.profileImage ? (
+                    <img
+                      src={user.profileImage}
+                      alt={user.name}
+                      className="w-8 h-8 rounded-full object-cover border"
+                      style={{ marginRight: '0.5rem' }}
+                    />
+                  ) : (
+                    <span className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-xs font-bold border">
+                      {user.name[0]}
+                    </span>
+                  )}
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-auto" align="start">
                   <DropdownMenuLabel
@@ -253,14 +431,17 @@ export function Header() {
                     className="!cursor-default !bg-muted/40 !p-3 !rounded-md !mb-1"
                   >
                     <div className="flex flex-row items-center gap-3">
-                      <img
-                        src={
-                          user.profileImage ??
-                          'https://hips.hearstapps.com/hmg-prod/images/dog-puppy-on-garden-royalty-free-image-1586966191.jpg'
-                        }
-                        alt={user.name}
-                        className="w-10 h-10 rounded-full object-cover border shadow-sm"
-                      />
+                      {user.profileImage ? (
+                        <img
+                          src={user.profileImage}
+                          alt={user.name}
+                          className="w-10 h-10 rounded-full object-cover border shadow-sm"
+                        />
+                      ) : (
+                        <span className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-xs font-bold border">
+                          {user.name[0]}
+                        </span>
+                      )}
                       <div className="flex flex-col min-w-0 flex-grow justify-center">
                         <span className="font-medium text-base leading-tight break-words whitespace-normal">
                           {user.name}

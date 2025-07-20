@@ -6,6 +6,9 @@ import {
   googleLogin,
   listUsers,
   editUser,
+  getNotifications,
+  markNotificationsRead,
+  markNotificationRead,
 } from '../controllers/auth.controller';
 import { authenticateToken } from '../middleware/auth';
 import { body } from 'express-validator';
@@ -42,5 +45,8 @@ router.put('/me', authenticateToken, upload.single('profileImage'), editUser);
 router.post('/google', googleLogin);
 
 router.get('/users', authenticateToken, listUsers);
+router.get('/notifications', authenticateToken, getNotifications);
+router.patch('/notifications/read', authenticateToken, markNotificationsRead);
+router.patch('/notifications/:id/read', authenticateToken, markNotificationRead);
 
 export default router;

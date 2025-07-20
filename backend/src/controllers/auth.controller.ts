@@ -21,7 +21,11 @@ const storage = new Storage({
   projectId: process.env.GCP_PROJECT_ID,
   keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS,
 });
+
+// @ts-ignore kept to choose between GCP and Cloudinary
 const bucket = storage.bucket(process.env.GCP_BUCKET_NAME!);
+
+// @ts-ignore
 const upload = multer({ storage: multer.memoryStorage() });
 
 export const register = async (req: Request, res: Response): Promise<void> => {
@@ -238,5 +242,56 @@ export const editUser = async (req: MulterRequest, res: Response): Promise<void>
     res.json(updatedUser);
   } catch (error) {
     res.status(500).json({ message: 'Error updating user profile', error });
+  }
+};
+
+export const getNotifications = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = (req as any).user.id;
+    const { page = 1, pageSize = 20 } = req.query;
+    const skip = (Number(page) - 1) * Number(pageSize);
+
+    // (paginated, unread first, then recent)
+    const notifications = await prisma.notification.findMany({
+      where: { userId },
+      orderBy: [{ read: 'asc' }, { createdAt: 'desc' }],
+      skip,
+      take: Number(pageSize),
+    });
+
+    res.json(notifications);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching notifications' });
+  }
+};
+
+export const markNotificationsRead = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = (req as any).user.id;
+    await prisma.notification.updateMany({
+      where: { userId, read: false },
+      data: { read: true },
+    });
+
+    res.json({ message: 'All notifications marked as read' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error marking notifications as read' });
+  }
+};
+
+export const markNotificationRead = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = (req as any).user.id;
+    const { id } = req.params;
+    const notif = await prisma.notification.findUnique({ where: { id } });
+    if (!notif || notif.userId !== userId) {
+      res.status(404).json({ message: 'Notification not found' });
+      return;
+    }
+
+    await prisma.notification.update({ where: { id }, data: { read: true } });
+    res.json({ message: 'Notification marked as read' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error marking notification as read' });
   }
 };

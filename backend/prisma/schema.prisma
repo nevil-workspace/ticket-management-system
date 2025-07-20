@@ -24,6 +24,7 @@ model User {
   watchingTickets Ticket[]        @relation("TicketWatchers")
   comments        Comment[]
   TicketHistory   TicketHistory[]
+  notifications   Notification[]
 }
 
 model Board {
@@ -65,6 +66,7 @@ model Ticket {
   watchers    User[]          @relation("TicketWatchers")
   comments    Comment[]
   history     TicketHistory[]
+  notifications Notification[]
 }
 
 model Comment {
@@ -92,6 +94,19 @@ model TicketHistory {
   user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   commentId String?
   comment   Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  message   String
+  ticketId  String?
+  ticket    Ticket?  @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 enum Priority {

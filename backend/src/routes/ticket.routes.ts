@@ -9,6 +9,8 @@ import {
   editComment,
   deleteComment,
   searchTickets,
+  addWatcher,
+  removeWatcher,
 } from '../controllers/ticket.controller';
 import { authenticateToken, isBoardMember } from '../middleware/auth';
 import { body } from 'express-validator';
@@ -60,5 +62,8 @@ router.put(
   editComment,
 );
 router.delete('/:ticketId/comments/:commentId', deleteComment);
+
+router.post('/:ticketId/watchers', addWatcher);
+router.delete('/:ticketId/watchers', removeWatcher);
 
 export default router;

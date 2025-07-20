@@ -26,6 +26,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/hooks/useAuth';
 import { getHistoryMessage } from '@/lib/utils';
+import { socket } from '@/lib/api';
 
 interface User {
   id: string;
@@ -53,6 +54,7 @@ interface Ticket {
   boardId: string;
   comments: Comment[];
   history: TicketHistory[];
+  watchers: User[];
 }
 
 interface TicketHistory {
@@ -81,7 +83,7 @@ export function TicketDetail() {
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
-  const [addingComment, setAddingComment] = useState(false);
+  const [postingComment, setPostingComment] = useState(false);
 
   const [editMode, setEditMode] = useState(false);
   const [ticket, setTicket] = useState<Ticket | null>(null);
@@ -96,9 +98,13 @@ export function TicketDetail() {
   const [editingCommentContent, setEditingCommentContent] = useState('');
 
   const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null);
+  const [watching, setWatching] = useState(false);
 
   // @ts-ignore
-  const isMac = navigator.userAgentData?.platform?.toLowerCase().includes('mac') ?? false;
+  const [isMac, _] = useState<boolean>(
+    navigator.userAgentData?.platform?.toLowerCase().includes('mac') ?? false,
+  );
+
   const commentFormRef = useRef<HTMLFormElement | null>(null);
   const commentAreaRef = useRef<HTMLTextAreaElement | null>(null);
 
@@ -155,6 +161,25 @@ export function TicketDetail() {
   }, [ticketId]);
 
   useEffect(() => {
+    if (ticket && user) {
+      setWatching(ticket.watchers.some((w) => w.id === user.id));
+    }
+  }, [ticket, user]);
+
+  useEffect(() => {
+    if (!ticketId) return;
+    const handleWatchersUpdate = (data: any) => {
+      if (data.ticketId === ticketId) {
+        setTicket((prev) => (prev ? { ...prev, watchers: data.watchers } : prev));
+      }
+    };
+    socket.on('ticket:watchers-updated', handleWatchersUpdate);
+    return () => {
+      socket.off('ticket:watchers-updated', handleWatchersUpdate);
+    };
+  }, [ticketId]);
+
+  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const isSubmitShortcut =
         (isMac && e.metaKey && e.key === 'Enter') || (!isMac && e.ctrlKey && e.key === 'Enter');
@@ -205,7 +230,7 @@ export function TicketDetail() {
   const handleCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!comment.trim() || !ticketId) return;
-    setAddingComment(true);
+    setPostingComment(true);
     try {
       const newComment = await ticketAPI.addComment(ticketId, { content: comment });
       setTicket((prev) => (prev ? { ...prev, comments: [newComment, ...prev.comments] } : prev));
@@ -214,7 +239,7 @@ export function TicketDetail() {
     } catch (e) {
       toast.error('Failed to add comment');
     } finally {
-      setAddingComment(false);
+      setPostingComment(false);
     }
   };
 
@@ -246,6 +271,21 @@ export function TicketDetail() {
       toast.success('Comment deleted');
     } catch {
       toast.error('Failed to delete comment');
+    }
+  };
+
+  const handleWatchToggle = async () => {
+    if (!ticketId) return;
+    try {
+      if (watching) {
+        await ticketAPI.removeWatcher(ticketId);
+        setWatching(false);
+      } else {
+        await ticketAPI.addWatcher(ticketId);
+        setWatching(true);
+      }
+    } catch {
+      toast.error('Failed to update watch status');
     }
   };
 
@@ -397,6 +437,13 @@ export function TicketDetail() {
                 {ticket.title}
               </h1>
               <Button
+                variant={watching ? 'secondary' : 'outline'}
+                size="sm"
+                onClick={handleWatchToggle}
+              >
+                {watching ? 'Unwatch' : 'Watch'}
+              </Button>
+              <Button
                 variant="outline"
                 size="sm"
                 onClick={onEdit}
@@ -435,12 +482,12 @@ export function TicketDetail() {
               rows={3}
               ref={commentAreaRef}
               placeholder="Write your comment..."
-              disabled={addingComment}
+              disabled={postingComment}
               required
             />
             <div className="flex justify-between items-center">
-              <Button type="submit" disabled={addingComment || !comment.trim()}>
-                {addingComment ? 'Posting...' : 'Post'}
+              <Button type="submit" disabled={postingComment || !comment.trim()}>
+                {postingComment ? 'Posting...' : 'Post'}
               </Button>
               <div className="text-xs text-muted-foreground">
                 Press{' '}
