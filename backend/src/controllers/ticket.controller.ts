@@ -333,6 +333,10 @@ export const updateTicket = async (req: Request, res: Response): Promise<void> =
       });
     }
 
+    if (historyEntries.length > 0) {
+      await prisma.ticketHistory.createMany({ data: historyEntries });
+    }
+
     const updatedTicket = await prisma.ticket.update({
       where: { id: ticketId },
       data: updateData,
@@ -345,18 +349,23 @@ export const updateTicket = async (req: Request, res: Response): Promise<void> =
           },
         },
         column: true,
+        history: {
+          orderBy: {
+            createdAt: 'desc',
+          },
+          include: {
+            user: true,
+          },
+        },
       },
     });
 
     console.log('Updated ticket:', updatedTicket);
 
-    if (historyEntries.length > 0) {
-      await prisma.ticketHistory.createMany({ data: historyEntries });
-    }
-
     await emitTicketUpdate(
       ticketId,
       'ticket:updated',
+      updatedTicket,
       userId,
       `Ticket updated: ${updatedTicket.title}`,
     );
@@ -423,7 +432,7 @@ export const addComment = async (req: Request, res: Response): Promise<void> => 
       return;
     }
 
-    const comment = await prisma.comment.create({
+    const newComment = await prisma.comment.create({
       data: {
         content,
         ticketId,
@@ -441,7 +450,7 @@ export const addComment = async (req: Request, res: Response): Promise<void> => 
         field: 'COMMENT_ADDED',
         newValue: content,
         userId,
-        commentId: comment.id,
+        commentId: newComment.id,
         message: getHistoryMessage({ field: 'COMMENT_ADDED', user }),
       },
     });
@@ -449,10 +458,11 @@ export const addComment = async (req: Request, res: Response): Promise<void> => 
     await emitTicketUpdate(
       ticketId,
       'ticket:comment',
+      newComment,
       userId,
       `New comment on ticket: ${ticket.title}`,
     );
-    res.status(201).json(comment);
+    res.status(201).json(newComment);
   } catch (error) {
     res.status(500).json({ message: 'Error adding comment' });
   }
@@ -641,6 +651,7 @@ export const removeWatcher = async (req: Request, res: Response): Promise<void> 
 async function emitTicketUpdate(
   ticketId: string,
   event: string,
+  payload?: object | null,
   actorId?: string,
   message?: string,
 ) {
@@ -678,7 +689,7 @@ async function emitTicketUpdate(
 
       // Emit the notification object (with real ID) to each watcher
       for (const notif of createdNotifications) {
-        io.to(notif.userId).emit(event, notif);
+        io.to(notif.userId).emit(event, notif, payload);
       }
     }
   }

@@ -57,7 +57,7 @@ export function Header() {
   const [searchLoading, setSearchLoading] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [notifOpen, setNotifOpen] = useState(false);
-  const [notifPage, setNotifPage] = useState(1);
+  const [_, setNotifPage] = useState(1);
   const [notifHasMore, setNotifHasMore] = useState(true);
   const [notifLoading, setNotifLoading] = useState(false);
 

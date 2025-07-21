@@ -100,8 +100,8 @@ export function TicketDetail() {
   const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null);
   const [watching, setWatching] = useState(false);
 
-  // @ts-ignore
   const [isMac, _] = useState<boolean>(
+    // @ts-ignore
     navigator.userAgentData?.platform?.toLowerCase().includes('mac') ?? false,
   );
 
@@ -166,6 +166,7 @@ export function TicketDetail() {
     }
   }, [ticket, user]);
 
+  // listen to watchers update on socket
   useEffect(() => {
     if (!ticketId) return;
     const handleWatchersUpdate = (data: any) => {
@@ -176,6 +177,49 @@ export function TicketDetail() {
     socket.on('ticket:watchers-updated', handleWatchersUpdate);
     return () => {
       socket.off('ticket:watchers-updated', handleWatchersUpdate);
+    };
+  }, [ticketId]);
+
+  // listen to ticket update on socket
+  useEffect(() => {
+    if (!ticketId) return;
+
+    const handleTicketUpdate = (notif: any, ticketData: any) => {
+      console.log('ticket updated: ', ticketData);
+      if (notif.ticketId === ticketId && ticketData) {
+        setTicket((prev) =>
+          prev
+            ? {
+                ...prev,
+                title: ticketData.title,
+                description: ticketData.description,
+                assignee: ticketData.assignee,
+                comments: ticketData.comments,
+                history: ticketData.history,
+              }
+            : ticketData,
+        );
+      }
+    };
+
+    const handleNewComment = (notif: any, newComment: any) => {
+      if (notif.ticketId === ticketId) {
+        setTicket((prev) =>
+          prev
+            ? {
+                ...prev,
+                comments: [newComment, ...prev.comments],
+              }
+            : prev,
+        );
+      }
+    };
+
+    socket.on('ticket:updated', handleTicketUpdate);
+    socket.on('ticket:comment', handleNewComment);
+    return () => {
+      socket.off('ticket:updated', handleTicketUpdate);
+      socket.off('ticket:comment', handleNewComment);
     };
   }, [ticketId]);
 
