@@ -251,10 +251,9 @@ export const getNotifications = async (req: Request, res: Response): Promise<voi
     const { page = 1, pageSize = 20 } = req.query;
     const skip = (Number(page) - 1) * Number(pageSize);
 
-    // (paginated, unread first, then recent)
     const notifications = await prisma.notification.findMany({
       where: { userId },
-      orderBy: [{ read: 'asc' }, { createdAt: 'desc' }],
+      orderBy: [{ createdAt: 'desc' }],
       skip,
       take: Number(pageSize),
     });

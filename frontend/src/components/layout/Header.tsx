@@ -382,7 +382,8 @@ export function Header() {
                   </>
                 )}
                 {notifHasMore && (
-                  <button
+                  <Button
+                    variant="link"
                     className="w-full p-2 text-center flex items-center justify-center gap-2 disabled:opacity-60 text-primary hover:underline"
                     onClick={() => {
                       setNotifPage((p) => {
@@ -396,7 +397,7 @@ export function Header() {
                     <span className="text-xs font-medium">
                       {notifLoading ? 'Loading...' : 'Load more'}
                     </span>
-                  </button>
+                  </Button>
                 )}
               </PopoverContent>
             </Popover>

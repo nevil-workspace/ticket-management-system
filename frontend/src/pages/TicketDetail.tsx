@@ -18,12 +18,8 @@ import {
 } from '@/components/ui/select';
 import { ArrowLeft } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-} from '@/components/ui/dropdown-menu';
+import { CommentItem } from '@/components/ui/CommentItem';
+import { CommentForm } from '@/components/ui/CommentForm';
 import { useAuth } from '@/hooks/useAuth';
 import { getHistoryMessage } from '@/lib/utils';
 import { socket } from '@/lib/api';
@@ -51,6 +47,7 @@ interface Ticket {
   createdAt: string;
   updatedAt: string;
   assignee?: User;
+  assigneeId?: string;
   boardId: string;
   comments: Comment[];
   history: TicketHistory[];
@@ -87,17 +84,12 @@ export function TicketDetail() {
 
   const [editMode, setEditMode] = useState(false);
   const [ticket, setTicket] = useState<Ticket | null>(null);
-  const [comment, setComment] = useState('');
 
   const [loadingMembers, setLoadingMembers] = useState(true);
   const [members, setMembers] = useState<User[]>([]);
 
   const [activeTab, setActiveTab] = useState('comments');
 
-  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
-  const [editingCommentContent, setEditingCommentContent] = useState('');
-
-  const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null);
   const [watching, setWatching] = useState(false);
 
   const [isMac, _] = useState<boolean>(
@@ -185,17 +177,12 @@ export function TicketDetail() {
     if (!ticketId) return;
 
     const handleTicketUpdate = (notif: any, ticketData: any) => {
-      console.log('ticket updated: ', ticketData);
       if (notif.ticketId === ticketId && ticketData) {
         setTicket((prev) =>
           prev
             ? {
                 ...prev,
-                title: ticketData.title,
-                description: ticketData.description,
-                assignee: ticketData.assignee,
-                comments: ticketData.comments,
-                history: ticketData.history,
+                ...ticketData,
               }
             : ticketData,
         );
@@ -222,6 +209,17 @@ export function TicketDetail() {
       socket.off('ticket:comment', handleNewComment);
     };
   }, [ticketId]);
+
+  useEffect(() => {
+    if (editMode && ticket) {
+      reset({
+        title: ticket.title,
+        description: ticket.description,
+        priority: ticket.priority,
+        assigneeId: ticket.assignee?.id || '',
+      });
+    }
+  }, [ticket, editMode, reset]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -268,53 +266,6 @@ export function TicketDetail() {
       fetchTicket();
     } catch {
       toast.error('Failed to update ticket');
-    }
-  };
-
-  const handleCommentSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!comment.trim() || !ticketId) return;
-    setPostingComment(true);
-    try {
-      const newComment = await ticketAPI.addComment(ticketId, { content: comment });
-      setTicket((prev) => (prev ? { ...prev, comments: [newComment, ...prev.comments] } : prev));
-      setComment('');
-      toast.success('Comment added');
-    } catch (e) {
-      toast.error('Failed to add comment');
-    } finally {
-      setPostingComment(false);
-    }
-  };
-
-  const handleEditComment = (commentId: string, content: string) => {
-    setEditingCommentId(commentId);
-    setEditingCommentContent(content);
-  };
-
-  const handleEditCommentSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!ticketId || !editingCommentId) return;
-    try {
-      await ticketAPI.editComment(ticketId, editingCommentId, { content: editingCommentContent });
-      setEditingCommentId(null);
-      setEditingCommentContent('');
-      fetchTicket();
-      toast.success('Comment updated');
-    } catch {
-      toast.error('Failed to update comment');
-    }
-  };
-
-  const handleDeleteComment = async (commentId: string) => {
-    if (!ticketId) return;
-    try {
-      await ticketAPI.deleteComment(ticketId, commentId);
-      setDeletingCommentId(null);
-      fetchTicket();
-      toast.success('Comment deleted');
-    } catch {
-      toast.error('Failed to delete comment');
     }
   };
 
@@ -411,6 +362,7 @@ export function TicketDetail() {
                 control={control}
                 render={({ field }) => (
                   <Select
+                    key={field.value}
                     value={field.value}
                     onValueChange={field.onChange}
                     disabled={isSubmitting}
@@ -438,6 +390,7 @@ export function TicketDetail() {
                 control={control}
                 render={({ field }) => (
                   <Select
+                    key={field.value}
                     value={field.value}
                     onValueChange={field.onChange}
                     disabled={isSubmitting || loadingMembers}
@@ -515,117 +468,80 @@ export function TicketDetail() {
           <TabsTrigger value="history">History</TabsTrigger>
         </TabsList>
         <TabsContent value="comments">
-          <form onSubmit={handleCommentSubmit} className="space-y-2 my-4" ref={commentFormRef}>
-            <Label htmlFor="comment" className="text-sm font-medium">
-              Add a comment
-            </Label>
-            <Textarea
-              id="comment"
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-              rows={3}
-              ref={commentAreaRef}
-              placeholder="Write your comment..."
-              disabled={postingComment}
-              required
-            />
-            <div className="flex justify-between items-center">
-              <Button type="submit" disabled={postingComment || !comment.trim()}>
-                {postingComment ? 'Posting...' : 'Post'}
-              </Button>
-              <div className="text-xs text-muted-foreground">
-                Press{' '}
-                <kbd className="rounded border bg-muted px-1 py-0.5 text-xs">
-                  {isMac ? '⌘' : 'Ctrl'}
-                </kbd>{' '}
-                + <kbd className="rounded border bg-muted px-1 py-0.5 text-xs">Enter</kbd> to post
-              </div>
-            </div>
-          </form>
+          {/* New Comment Secition */}
+          <CommentForm
+            isMac={isMac}
+            posting={postingComment}
+            onSubmit={async (value) => {
+              if (!ticketId) return;
+              setPostingComment(true);
+              try {
+                const newComment = await ticketAPI.addComment(ticketId, { content: value });
+                setTicket((prev) =>
+                  prev ? { ...prev, comments: [newComment, ...prev.comments] } : prev,
+                );
+                toast.success('Comment added');
+              } catch (e) {
+                toast.error('Failed to add comment');
+              } finally {
+                setPostingComment(false);
+              }
+            }}
+          />
 
-          <h2 className="text-xl font-semibold">Comments</h2>
+          <h2 className="text-xl font-semibold mb-2">Comments</h2>
           <div className="space-y-4">
             {ticket.comments.length === 0 && <div className="text-gray-400">No comments yet.</div>}
             {[...ticket.comments]
               .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
               .map((c) => (
-                <div key={c.id} className="border rounded-lg p-3 bg-card">
-                  <div className="flex items-center gap-2 mb-1">
-                    {c.user.profileImage && (
-                      <img
-                        src={c.user.profileImage}
-                        alt={c.user.name}
-                        className="w-6 h-6 rounded-full"
-                      />
-                    )}
-                    <span className="font-medium">{c.user.name}</span>
-                    <span className="text-xs text-gray-400">
-                      {new Date(c.createdAt).toLocaleString()}
-                    </span>
-                    {user && c.user.id === user.id && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="ml-auto">
-                            ...
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent>
-                          <DropdownMenuItem onClick={() => handleEditComment(c.id, c.content)}>
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => setDeletingCommentId(c.id)}>
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
-                  </div>
-                  {editingCommentId === c.id ? (
-                    <form onSubmit={handleEditCommentSubmit} className="space-y-2">
-                      <Textarea
-                        value={editingCommentContent}
-                        onChange={(e) => setEditingCommentContent(e.target.value)}
-                        rows={2}
-                        required
-                        autoFocus
-                      />
-                      <div className="flex gap-2">
-                        <Button type="submit" size="sm">
-                          Save
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setEditingCommentId(null)}
-                        >
-                          Cancel
-                        </Button>
-                      </div>
-                    </form>
-                  ) : (
-                    <div className="text-sm">{c.content}</div>
-                  )}
-                  {deletingCommentId === c.id && (
-                    <div className="mt-2 flex gap-2">
-                      <span>Delete this comment?</span>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => handleDeleteComment(c.id)}
-                      >
-                        Delete
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setDeletingCommentId(null)}
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                  )}
-                </div>
+                <CommentItem
+                  key={c.id}
+                  comment={c}
+                  currentUserId={user?.id}
+                  onEditSubmit={async (id, content) => {
+                    if (!ticketId) return;
+                    try {
+                      await ticketAPI.editComment(ticketId, id, { content });
+                      // optimistic update
+                      setTicket((prev) =>
+                        prev
+                          ? {
+                              ...prev,
+                              comments: prev.comments.map((comment) =>
+                                comment.id === id ? { ...comment, content } : comment,
+                              ),
+                            }
+                          : prev,
+                      );
+
+                      toast.success('Comment updated');
+                    } catch {
+                      toast.error('Failed to update comment');
+                      fetchTicket(); // refetch on error
+                    }
+                  }}
+                  onDelete={async (id) => {
+                    if (!ticketId) return;
+                    try {
+                      await ticketAPI.deleteComment(ticketId, id);
+
+                      // optimistic update
+                      setTicket((prev) =>
+                        prev
+                          ? {
+                              ...prev,
+                              comments: prev.comments.filter((comment) => comment.id !== id),
+                            }
+                          : prev,
+                      );
+                      toast.success('Comment deleted');
+                    } catch {
+                      toast.error('Failed to delete comment');
+                      fetchTicket(); // refetch on error
+                    }
+                  }}
+                />
               ))}
           </div>
         </TabsContent>

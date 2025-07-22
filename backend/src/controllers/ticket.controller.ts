@@ -323,6 +323,9 @@ export const updateTicket = async (req: Request, res: Response): Promise<void> =
         where: { id: columnId },
       });
 
+      // update the status accordingly
+      updateData.status = newColumn?.name || 'Unknown';
+
       historyEntries.push({
         ticketId: ticketId,
         field: 'STATUS',
@@ -359,8 +362,6 @@ export const updateTicket = async (req: Request, res: Response): Promise<void> =
         },
       },
     });
-
-    console.log('Updated ticket:', updatedTicket);
 
     await emitTicketUpdate(
       ticketId,
