@@ -49,6 +49,7 @@ export const CommentForm = React.memo(({ onSubmit, isMac, posting }: CommentForm
         placeholder="Write your comment..."
         disabled={posting}
         required
+        autoFocus
       />
       <div className="flex justify-between items-center">
         <Button type="submit" disabled={posting || !comment.trim()}>

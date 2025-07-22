@@ -10,6 +10,7 @@ import { Server as SocketIOServer } from 'socket.io';
 import authRoutes from './routes/auth.routes';
 import boardRoutes from './routes/board.routes';
 import ticketRoutes from './routes/ticket.routes';
+import { rateLimitMiddleware } from './middleware/rateLimiterMiddleWare';
 
 dotenv.config();
 
@@ -30,7 +31,7 @@ io.on('connection', (socket) => {
   socket.on('user:join', (userId: string) => {
     if (userId) {
       socket.join(userId);
-      console.log(`User ${userId} joined their SockerId (${socket.id})`);
+      console.log(`User ${userId} joined their SocketId (${socket.id})`);
     }
   });
   socket.on('disconnect', () => {
@@ -43,6 +44,9 @@ app.use(helmet());
 app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// rate limit middleware
+app.use(rateLimitMiddleware);
 
 app.use('/api/auth', authRoutes);
 app.use('/api/boards', boardRoutes);

@@ -7,9 +7,26 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: ticket_management
     ports:
-      - "5432:5432"
+      - '5432:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - tms-network
+
+  redis:
+    image: redis:8-alpine
+    container_name: ticket_management_redis
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    networks:
+      - tms-network
 
 volumes:
-  postgres_data: 
+  postgres_data:
+  redis_data:
+
+networks:
+  tms-network:
+    driver: bridge

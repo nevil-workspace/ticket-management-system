@@ -50,6 +50,12 @@ importers:
       prisma:
         specifier: ^6.11.1
         version: 6.12.0(typescript@5.8.3)
+      rate-limiter-flexible:
+        specifier: ^7.1.1
+        version: 7.1.1
+      redis:
+        specifier: ^5.6.0
+        version: 5.6.0
       socket.io:
         specifier: ^4.8.1
         version: 4.8.1
@@ -235,6 +241,34 @@ packages:
 
   '@prisma/get-platform@6.12.0':
     resolution: {integrity: sha512-nRerTGhTlgyvcBlyWgt8OLNIV7QgJS2XYXMJD1hysorMCuLAjuDDuoxmVt7C2nLxbuxbWPp7OuFRHC23HqD9dA==}
+
+  '@redis/bloom@5.6.0':
+    resolution: {integrity: sha512-l13/d6BaZDJzogzZJEphIeZ8J0hpQpjkMiozomTm6nJiMNYkoPsNOBOOQua4QsG0fFjyPmLMDJFPAp5FBQtTXg==}
+    engines: {node: '>= 18'}
+    peerDependencies:
+      '@redis/client': ^5.6.0
+
+  '@redis/client@5.6.0':
+    resolution: {integrity: sha512-wmP9kCFElCSr4MM4+1E4VckDuN4wLtiXSM/J0rKVQppajxQhowci89RGZr2OdLualowb8SRJ/R6OjsXrn9ZNFA==}
+    engines: {node: '>= 18'}
+
+  '@redis/json@5.6.0':
+    resolution: {integrity: sha512-YQN9ZqaSDpdLfJqwzcF4WeuJMGru/h4WsV7GeeNtXsSeyQjHTyDxrd48xXfRRJGv7HitA7zGnzdHplNeKOgrZA==}
+    engines: {node: '>= 18'}
+    peerDependencies:
+      '@redis/client': ^5.6.0
+
+  '@redis/search@5.6.0':
+    resolution: {integrity: sha512-sLgQl92EyMVNHtri5K8Q0j2xt9c0cO9HYurXz667Un4xeUYR+B/Dw5lLG35yqO7VvVxb9amHJo9sAWumkKZYwA==}
+    engines: {node: '>= 18'}
+    peerDependencies:
+      '@redis/client': ^5.6.0
+
+  '@redis/time-series@5.6.0':
+    resolution: {integrity: sha512-tXABmN1vu4aTNL3WI4Iolpvx/5jgil2Bs31ozvKblT+jkUoRkk8ykmYo9Pv/Mp7Gk6/Qkr/2rMgVminrt/4BBQ==}
+    engines: {node: '>= 18'}
+    peerDependencies:
+      '@redis/client': ^5.6.0
 
   '@socket.io/component-emitter@3.1.2':
     resolution: {integrity: sha512-9BCxFwvbGg/RsZK9tjXd8s4UcwR0MWeFQ1XEKIQVVvAGJyINdrqKMcTRyLoK8Rse1GjzLV9cwjWV1olXRWEXVA==}
@@ -527,6 +561,10 @@ packages:
   cloudinary@2.7.0:
     resolution: {integrity: sha512-qrqDn31+qkMCzKu1GfRpzPNAO86jchcNwEHCUiqvPHNSFqu7FTNF9FuAkBUyvM1CFFgFPu64NT0DyeREwLwK0w==}
     engines: {node: '>=9'}
+
+  cluster-key-slot@1.1.2:
+    resolution: {integrity: sha512-RMr0FhtfXemyinomL4hrWcYJxmX6deFdCxpJzhDttxgO1+bcCnkk+9drydLVDmAMG7NE6aN/fl4F7ucU/90gAA==}
+    engines: {node: '>=0.10.0'}
 
   color-convert@2.0.1:
     resolution: {integrity: sha512-RRECPsj7iu/xb5oKYcsFHSppFNnsj/52OVTRKb4zP5onXwVF3zVmmToNcOfGC+CRDpfK/U584fMg38ZHCaElKQ==}
@@ -1312,6 +1350,9 @@ packages:
     resolution: {integrity: sha512-Hrgsx+orqoygnmhFbKaHE6c296J+HTAQXoxEF6gNupROmmGJRoyzfG3ccAveqCBrwr/2yxQ5BVd/GTl5agOwSg==}
     engines: {node: '>= 0.6'}
 
+  rate-limiter-flexible@7.1.1:
+    resolution: {integrity: sha512-lsYRcqRSJrKBNt6pMzBJTiCJP5KnwsGWdObMZxd19JFUJRntM+yuHs4/2bs6NZweSLgpsDcykvzyQaumoslWQg==}
+
   raw-body@3.0.0:
     resolution: {integrity: sha512-RmkhL8CAyCRPXCE28MMH0z2PNWQBNk2Q09ZdxM9IOOXwxwZbN+qbWaatPkdkWIKL2ZVDImrN/pK5HTRz2PcS4g==}
     engines: {node: '>= 0.8'}
@@ -1323,6 +1364,10 @@ packages:
   readdirp@3.6.0:
     resolution: {integrity: sha512-hOS089on8RduqdbhvQ5Z37A0ESjsqz6qnRcffsMU3495FuTdqSm+7bhJ29JvIOsBDEEnan5DPu9t3To9VRlMzA==}
     engines: {node: '>=8.10.0'}
+
+  redis@5.6.0:
+    resolution: {integrity: sha512-0x3pM3SlYA5azdNwO8qgfMBzoOqSqr9M+sd1hojbcn0ZDM5zsmKeMM+zpTp6LIY+mbQomIc/RTTQKuBzr8QKzQ==}
+    engines: {node: '>= 18'}
 
   resolve-from@4.0.0:
     resolution: {integrity: sha512-pb/MYmXstAkysRFx8piNI1tGFNQIFA3vkE3Gq4EuA1dF6gHp/+vgZqsCGJapvy8N3Q+4o7FwvquPJcnZ7RYy4g==}
@@ -1772,6 +1817,26 @@ snapshots:
     dependencies:
       '@prisma/debug': 6.12.0
 
+  '@redis/bloom@5.6.0(@redis/client@5.6.0)':
+    dependencies:
+      '@redis/client': 5.6.0
+
+  '@redis/client@5.6.0':
+    dependencies:
+      cluster-key-slot: 1.1.2
+
+  '@redis/json@5.6.0(@redis/client@5.6.0)':
+    dependencies:
+      '@redis/client': 5.6.0
+
+  '@redis/search@5.6.0(@redis/client@5.6.0)':
+    dependencies:
+      '@redis/client': 5.6.0
+
+  '@redis/time-series@5.6.0(@redis/client@5.6.0)':
+    dependencies:
+      '@redis/client': 5.6.0
+
   '@socket.io/component-emitter@3.1.2': {}
 
   '@tootallnate/once@2.0.0': {}
@@ -2112,6 +2177,8 @@ snapshots:
     dependencies:
       lodash: 4.17.21
       q: 1.5.1
+
+  cluster-key-slot@1.1.2: {}
 
   color-convert@2.0.1:
     dependencies:
@@ -2926,6 +2993,8 @@ snapshots:
 
   range-parser@1.2.1: {}
 
+  rate-limiter-flexible@7.1.1: {}
+
   raw-body@3.0.0:
     dependencies:
       bytes: 3.1.2
@@ -2942,6 +3011,14 @@ snapshots:
   readdirp@3.6.0:
     dependencies:
       picomatch: 2.3.1
+
+  redis@5.6.0:
+    dependencies:
+      '@redis/bloom': 5.6.0(@redis/client@5.6.0)
+      '@redis/client': 5.6.0
+      '@redis/json': 5.6.0(@redis/client@5.6.0)
+      '@redis/search': 5.6.0(@redis/client@5.6.0)
+      '@redis/time-series': 5.6.0(@redis/client@5.6.0)
 
   resolve-from@4.0.0: {}
 
