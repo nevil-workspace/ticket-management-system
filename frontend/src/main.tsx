@@ -5,7 +5,7 @@ import './index.css';
 import axios from 'axios';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 
-axios.defaults.baseURL = process.env.VITE_API_URL || 'http://localhost:3000';
+axios.defaults.baseURL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 axios.defaults.headers.common['Content-Type'] = 'application/json';
 
 console.log('Setting default axios url: ', axios.defaults.baseURL);
