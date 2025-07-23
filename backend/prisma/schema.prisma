@@ -6,8 +6,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -50,22 +51,22 @@ model Column {
 }
 
 model Ticket {
-  id          String          @id @default(uuid())
-  title       String
-  description String?
-  priority    Priority        @default(MEDIUM)
-  status      String
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
-  boardId     String
-  board       Board           @relation(fields: [boardId], references: [id], onDelete: Cascade)
-  columnId    String
-  column      Column          @relation(fields: [columnId], references: [id], onDelete: Cascade)
-  assigneeId  String?
-  assignee    User?           @relation("TicketAssignee", fields: [assigneeId], references: [id])
-  watchers    User[]          @relation("TicketWatchers")
-  comments    Comment[]
-  history     TicketHistory[]
+  id            String          @id @default(uuid())
+  title         String
+  description   String?
+  priority      Priority        @default(MEDIUM)
+  status        String
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  boardId       String
+  board         Board           @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  columnId      String
+  column        Column          @relation(fields: [columnId], references: [id], onDelete: Cascade)
+  assigneeId    String?
+  assignee      User?           @relation("TicketAssignee", fields: [assigneeId], references: [id])
+  watchers      User[]          @relation("TicketWatchers")
+  comments      Comment[]
+  history       TicketHistory[]
   notifications Notification[]
 }
 
