@@ -46,7 +46,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // rate limit middleware
-// app.use(rateLimitMiddleware);
+app.use(rateLimitMiddleware);
 
 app.use('/api/auth', authRoutes);
 app.use('/api/boards', boardRoutes);
