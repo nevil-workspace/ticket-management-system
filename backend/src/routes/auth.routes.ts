@@ -7,8 +7,8 @@ import {
   listUsers,
   editUser,
   getNotifications,
-  markNotificationsRead,
-  markNotificationRead,
+  markAllNotificationsRead,
+  markNotificationReadById,
 } from '../controllers/auth.controller';
 import { authenticateToken } from '../middleware/auth';
 import { body } from 'express-validator';
@@ -46,7 +46,7 @@ router.post('/google', googleLogin);
 
 router.get('/users', authenticateToken, listUsers);
 router.get('/notifications', authenticateToken, getNotifications);
-router.patch('/notifications/read', authenticateToken, markNotificationsRead);
-router.patch('/notifications/:id/read', authenticateToken, markNotificationRead);
+router.patch('/notifications/read', authenticateToken, markAllNotificationsRead);
+router.patch('/notifications/:id/read', authenticateToken, markNotificationReadById);
 
 export default router;

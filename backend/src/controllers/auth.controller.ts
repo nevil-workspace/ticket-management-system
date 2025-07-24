@@ -264,7 +264,7 @@ export const getNotifications = async (req: Request, res: Response): Promise<voi
   }
 };
 
-export const markNotificationsRead = async (req: Request, res: Response): Promise<void> => {
+export const markAllNotificationsRead = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = (req as any).user.id;
     await prisma.notification.updateMany({
@@ -278,7 +278,7 @@ export const markNotificationsRead = async (req: Request, res: Response): Promis
   }
 };
 
-export const markNotificationRead = async (req: Request, res: Response): Promise<void> => {
+export const markNotificationReadById = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = (req as any).user.id;
     const { id } = req.params;

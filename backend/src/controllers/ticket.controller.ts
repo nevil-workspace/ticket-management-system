@@ -542,6 +542,8 @@ export const deleteComment = async (req: Request, res: Response): Promise<void> 
   }
 };
 
+// We have a separate endpoint to search tickets
+// mainly because the GET tickets has many extra includes that we don't need here
 export const searchTickets = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = (req as any).user.id;
