@@ -181,6 +181,16 @@ The system uses the following main entities:
 <img src="https://github.com/user-attachments/assets/1a943483-7b23-4a88-8063-6282c966204a" width="45%"></img><img src="https://github.com/user-attachments/assets/2e6f1956-4a5b-47a9-b807-cc4d21fd3c92" width="45%"></img><img src="https://github.com/user-attachments/assets/f13b9a20-7813-4d1f-880a-9bf228b4a074" width="45%"></img><img src="https://github.com/user-attachments/assets/14750005-ef37-4466-9ee6-30aaaca024c9" width="45%"></img><img src="https://github.com/user-attachments/assets/0b197c7f-78f5-4d61-a27e-36c9d728cd16" width="45%"></img><img src="https://github.com/user-attachments/assets/b0e0551d-f08f-45da-8117-e9edc157eed2" width="45%"></img><img src="https://github.com/user-attachments/assets/2652cc6e-2fee-4b41-af9e-792b7e178828" width="45%"></img><img src="https://github.com/user-attachments/assets/1f41ed67-b3e4-4a4e-8d54-9ca50a71fff7" width="45%"></img><img src="https://github.com/user-attachments/assets/7cc192b8-513b-4f7c-97c3-12afb268aec2" width="45%"></img><img src="https://github.com/user-attachments/assets/8ae689fa-2f2c-46a0-9dd1-12a15d6a5baf" width="45%"></img><img src="https://github.com/user-attachments/assets/6646ec39-3c62-411f-ac10-f08aa39ccba3" width="45%"></img><img width="45%" src="https://github.com/user-attachments/assets/0ac3970c-24b8-463a-a236-0dc7068baf75"></img>
 ---
 
+## Deployment Stack 🫒
+
+- [Render](https://render.com/) for Node.js backend
+- [Vercel](https://vercel.com/) for React frontend
+- [Supabase](https://supabase.com/) for PostgreSQL database  
+- [Upstash](https://upstash.com/) for Redis
+- [Google Cloud Platform (GCP)](https://cloud.google.com/) for Google Authentication
+
+---
+
 ```javascript
 if (youEnjoyed) {
   starThisRepository();
